@@ -15,7 +15,7 @@
   --accent:#2a78d6; --accent-soft:#e6f0fc;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
   --q1:#cde2fb; --q2:#9ec5f4; --q3:#6da7ec; --q4:#3987e5; --q5:#256abf; --q6:#184f95; --q7:#0d366b;
-  --nojudge:#e4e3de; --warn:#b54708;
+  --nojudge:#e4e3de; --warn:#b54708; --flag:#fab219;
   --r:10px;
   font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
@@ -94,9 +94,13 @@ tr.sel td{background:var(--accent-soft)}
 .chip em{font-style:normal;color:var(--muted);margin-left:4px}
 .heat td.h{padding:0;border:2px solid var(--surface);width:16px;min-width:16px;height:16px;cursor:pointer}
 .heat td.h.nj{background:var(--nojudge)}
-.heat td.h.flag{outline:2px solid var(--text);outline-offset:-2px}
+.heat td.h.flag{outline:2px solid var(--flag);outline-offset:-2px}
 .heat th.wk{font-size:9.5px;font-weight:500;padding:2px 0;writing-mode:vertical-rl;transform:rotate(180deg);height:44px;text-align:left}
 .heat td.pn{white-space:nowrap;padding:0 10px 0 0;font-size:12px;position:sticky;left:0;background:var(--surface);z-index:1}
+.heat .pnw{display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.heat .cnt{font-variant-numeric:tabular-nums;color:var(--text);font-weight:600;min-width:46px;text-align:right}
+.heat .cnt em{font-style:normal;font-weight:400;color:var(--muted)}
+.heat th.pnh{position:sticky;left:0;background:var(--surface);z-index:2;vertical-align:bottom;text-align:right;padding:0 10px 4px 0;font-size:10.5px;font-weight:500;color:var(--text2);white-space:nowrap}
 .heat td.mg{white-space:nowrap;padding:6px 0 2px;font-size:11px;font-weight:600;color:var(--text2);position:sticky;left:0;background:var(--surface)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11.5px;color:var(--text2);margin:8px 0}
 .legend .k{display:inline-flex;align-items:center;gap:4px}
@@ -1186,15 +1190,17 @@ function renderWeeks(W) {
   for (const p of ppl) {
     const mg = M.people[p].lastMgr;
     if (mg !== lastMgr) { rows.push(`<tr><td class="mg" colspan="${weeks.length + 1}">${esc(mg)}</td></tr>`); lastMgr = mg; }
-    rows.push(`<tr><td class="pn">${esc(M.people[p].name)} <span class="muted">${M.people[p].role}</span></td>` + weeks.map(wk => {
+    const pw = [...byP.get(p).values()], nJ = pw.filter(w => w.judged).length, nF = pw.filter(w => w.flag).length;
+    rows.push(`<tr><td class="pn"><div class="pnw"><span>${esc(M.people[p].name)} <span class="muted">${M.people[p].role}</span></span><span class="cnt" data-tip="${esc(M.people[p].name + '\n' + nF + ' admin-heavy weeks out of ' + nJ + ' judged weeks (' + fP0(nF / (nJ || 1)) + ')')}">${nF}<em> / ${nJ}</em></span></div></td>` + weeks.map(wk => {
       const w = byP.get(p).get(wk);
       if (!w) return '<td class="h nj" data-tip="' + esc(M.people[p].name + ' · w/e ' + wk + '\nno rows') + '"></td>';
-      const tip = esc(`${M.people[p].name} · week ending ${wk}\nNet ${fH1(w.net)} h · admin ${fH1(w.admin)} h (${fP0(w.share)})${w.leave ? '\nLeave ' + fH1(w.leave) + ' h' : ''}\n${PHASES[w.phase]}${w.judged ? '' : '\nNot judged (< ' + CONFIG.MIN_WEEK_NET_HOURS + ' net h)'}`);
+      const verdict = !w.judged ? 'Not judged (< ' + CONFIG.MIN_WEEK_NET_HOURS + ' net h)' : w.flag ? '▲ ADMIN-HEAVY week (admin ≥ ' + fP0(S.thr) + ')' : 'Not admin-heavy (admin < ' + fP0(S.thr) + ')';
+      const tip = esc(`${M.people[p].name} · week ending ${wk}\n${verdict}\nNet ${fH1(w.net)} h · admin ${fH1(w.admin)} h (${fP0(w.share)})${w.leave ? '\nLeave ' + fH1(w.leave) + ' h' : ''}\nPipeline: ${PHASES[w.phase]}`);
       const bg = w.judged ? SEQ[Math.min(6, Math.floor(w.share * 10))] : 'var(--nojudge)';
       return `<td class="h${w.flag ? ' flag' : ''}${w.judged ? '' : ' nj'}" style="background:${bg}" data-p="${p}" data-w="${wk}" data-tip="${tip}"></td>`;
     }).join('') + '</tr>');
   }
-  const wkHead = weeks.map(wk => `<th class="wk">${wk.slice(5)}</th>`).join('');
+  const wkHead = `<th class="pnh">admin-heavy / judged weeks</th>` + weeks.map(wk => `<th class="wk">${wk.slice(5)}</th>`).join('');
   $('weeks').innerHTML =
     `<div class="row"><label>Admin-heavy when admin share ≥ <select id="thr">${thrOpts}</select></label></div>` +
     `<div class="tiles"><div class="tile"><div class="l">Person-weeks judged</div><div class="v">${judged.length.toLocaleString('en-US')}</div></div>` +
@@ -1208,8 +1214,8 @@ function renderWeeks(W) {
     `<div><h3 style="margin-top:0">By manager</h3><table><thead><tr><th>Manager</th><th class="num">People</th><th class="num">Weeks judged</th><th class="num">Admin-heavy</th><th class="num">% admin-heavy</th><th class="num">Avg admin share</th><th class="num">…of which changes/field only</th></tr></thead><tbody>` +
     [...bm.entries()].sort((a, b) => b[1].f / b[1].n - a[1].f / a[1].n).map(([m, o]) => `<tr class="click" data-m="${esc(m)}"><td>${esc(m)}</td><td class="num">${o.p.size}</td><td class="num">${o.n}</td><td class="num">${o.f}</td><td class="num">${fP(o.f / o.n)}</td><td class="num">${fP(o.s / o.n)}</td><td class="num">${o.f ? fP(o.fc / o.f) : '—'}</td></tr>`).join('') +
     `</tbody></table></div></div>` +
-    `<h3>Person × week · admin share</h3><div class="legend">${['<10%', '10–20%', '20–30%', '30–40%', '40–50%', '50–60%', '≥60%'].map((l, i) => `<span class="k"><i style="background:${SEQ[i]}"></i>${l}</span>`).join('')}<span class="k"><i style="background:var(--nojudge)"></i>not judged / no rows</span><span class="k"><i style="background:var(--surface);outline:2px solid var(--text);outline-offset:-2px"></i>admin-heavy</span><span class="muted">Click a cell for the week's detail.</span></div>` +
-    `<div style="overflow:auto;max-height:640px"><table class="heat" style="width:auto"><thead><tr><th></th>${wkHead}</tr></thead><tbody>${rows.join('')}</tbody></table></div><div id="weekDetail"></div>`;
+    `<h3>Person × week · admin share</h3><div class="legend">${['<10%', '10–20%', '20–30%', '30–40%', '40–50%', '50–60%', '≥60%'].map((l, i) => `<span class="k"><i style="background:${SEQ[i]}"></i>${l}</span>`).join('')}<span class="k"><i style="background:var(--nojudge)"></i>not judged / no rows</span><span class="k"><i style="background:var(--q6);outline:2px solid var(--flag);outline-offset:-2px"></i>admin-heavy (≥ ${fP0(S.thr)} admin)</span><span class="muted">Numbers after each name: admin-heavy weeks / weeks judged. Hover a cell for its numbers, click for the week's detail.</span></div>` +
+    `<div style="overflow:auto;max-height:640px"><table class="heat" style="width:auto"><thead><tr>${wkHead}</tr></thead><tbody>${rows.join('')}</tbody></table></div><div id="weekDetail"></div>`;
   $('thr').onchange = e => { S.thr = +e.target.value; renderInsights(); const W2 = aggWeeks(S.M, S.f, S.thr); renderWeeks(W2); renderPeople(aggComposition(S.M, S.f), W2); };
   $('weeks').querySelectorAll('tr[data-m]').forEach(tr => tr.onclick = () => setFilter('mgr', tr.dataset.m));
   $('weeks').querySelectorAll('td[data-p]').forEach(td => td.onclick = () => { S.weekSel = { p: +td.dataset.p, w: td.dataset.w }; renderWeekDetail(); });
