@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online SD · Where the time goes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f4f1; --surface:#fcfcfb; --line:#e3e2dd; --grid:#ecebe6; --hover:#f1f0ec;
+  --text:#0b0b0b; --text2:#52514e; --muted:#8a8984;
+  --accent:#2a78d6; --accent-soft:#e6f0fc;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --q1:#cde2fb; --q2:#9ec5f4; --q3:#6da7ec; --q4:#3987e5; --q5:#256abf; --q6:#184f95; --q7:#0d366b;
+  --nojudge:#e4e3de; --warn:#b54708;
+  --r:10px;
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-size:13px;line-height:1.45}
+.wrap{max-width:1360px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;padding:22px 0 16px}
+header.top h1{font-size:20px;font-weight:700;margin:0 0 2px;letter-spacing:-.01em}
+header.top .sub{margin:0;color:var(--text2)}
+.uploads{display:flex;gap:10px;flex-wrap:wrap}
+.file{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+.file:hover{border-color:var(--accent)}
+.file input{display:none}
+.file b{font-weight:600}
+.file em{font-style:normal;color:var(--muted);font-size:12px}
+.file em.ok{color:#006300}
+.file em.err{color:#b42318}
+#status{color:var(--text2);font-size:12px;min-height:18px;margin-top:4px;text-align:right}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:36px;text-align:center;color:var(--text2)}
+.empty h2{color:var(--text);font-size:16px;margin:0 0 8px}
+.empty ol{display:inline-block;text-align:left;margin:10px 0 0}
+nav.filters{position:sticky;top:0;z-index:20;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.fl{display:flex;flex-direction:column;gap:2px}
+.fl label{font-size:11px;color:var(--text2);font-weight:500}
+.fl select,.fl input{font:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text);min-width:110px;max-width:220px}
+.fl select.on{border-color:var(--accent);background:var(--accent-soft)}
+.sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+button.btn{font:inherit;font-size:12.5px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;color:var(--text)}
+button.btn:hover{border-color:var(--accent)}
+.note{font-size:12px;color:var(--warn);padding:6px 0 0;width:100%}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi .l{color:var(--text2);font-size:12px}
+.kpi .v{font-size:22px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .d{color:var(--muted);font-size:11.5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin:14px 0}
+.card h2{font-size:15px;margin:0;font-weight:600}
+.card .sub{color:var(--text2);margin:3px 0 14px;font-size:12.5px}
+.card h3{font-size:13px;margin:18px 0 8px;font-weight:600}
+.scope{display:inline-block;font-size:11px;color:var(--text2);border:1px solid var(--line);border-radius:20px;padding:1px 8px;margin-left:8px;font-weight:500;vertical-align:2px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{font-weight:600;color:var(--text2);font-size:11.5px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+th.num,td.num{text-align:right}
+th.sort{cursor:pointer}
+th.sort:hover{color:var(--text)}
+td{padding:5px 8px;border-bottom:1px solid var(--grid);vertical-align:middle}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--hover)}
+tr.sel td{background:var(--accent-soft)}
+.tscroll{max-height:520px;overflow:auto;border:1px solid var(--grid);border-radius:8px}
+.nw td{white-space:nowrap}.nw td.pname{white-space:normal;min-width:200px}
+.bar{height:8px;background:transparent;min-width:60px;width:100%}
+.bar i{display:block;height:8px;background:var(--accent);border-radius:0 4px 4px 0}
+.barcell{display:flex;align-items:center;gap:8px}
+.barcell span{min-width:52px;text-align:right}
+.tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:10px;border:1px solid var(--line);color:var(--text2);white-space:nowrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.stack{display:flex;gap:2px;height:22px;border-radius:5px;overflow:hidden;background:var(--surface)}
+.stack i{display:block;height:100%}
+.stack i:first-child{border-radius:4px 0 0 4px}.stack i:last-child{border-radius:0 4px 4px 0}
+.grid2{display:grid;grid-template-columns:minmax(300px,1fr) minmax(420px,1.4fr);gap:24px}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}}
+@media (max-width:900px){nav.filters{position:static}}
+.cols{position:relative;height:200px;margin:8px 0 0 34px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--line)}
+.cols .gl{position:absolute;left:0;right:0;border-top:1px solid var(--grid)}
+.cols .gl span{position:absolute;left:-34px;top:-8px;font-size:10.5px;color:var(--muted);width:28px;text-align:right}
+.col{flex:1;display:flex;justify-content:center;height:100%;align-items:flex-end;z-index:1}
+.col .st{width:100%;max-width:26px;display:flex;flex-direction:column-reverse;gap:2px;height:100%}
+.col .st i{display:block;width:100%}
+.col .st i:last-child{border-radius:4px 4px 0 0}
+.xl{display:flex;gap:6px;margin-left:34px}
+.xl span{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:5px 12px;cursor:pointer}
+.chip:hover{border-color:var(--accent);background:var(--accent-soft)}
+.chip em{font-style:normal;color:var(--muted);margin-left:4px}
+.heat td.h{padding:0;border:2px solid var(--surface);width:16px;min-width:16px;height:16px;cursor:pointer}
+.heat td.h.nj{background:var(--nojudge)}
+.heat td.h.flag{outline:2px solid var(--text);outline-offset:-2px}
+.heat th.wk{font-size:9.5px;font-weight:500;padding:2px 0;writing-mode:vertical-rl;transform:rotate(180deg);height:44px;text-align:left}
+.heat td.pn{white-space:nowrap;padding:0 10px 0 0;font-size:12px;position:sticky;left:0;background:var(--surface);z-index:1}
+.heat td.mg{white-space:nowrap;padding:6px 0 2px;font-size:11px;font-weight:600;color:var(--text2);position:sticky;left:0;background:var(--surface)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11.5px;color:var(--text2);margin:8px 0}
+.legend .k{display:inline-flex;align-items:center;gap:4px}
+.legend .k i{display:inline-block;width:14px;height:12px;border-radius:3px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.tile{border:1px solid var(--grid);border-radius:8px;padding:10px 12px}
+.tile .l{font-size:11.5px;color:var(--text2)}.tile .v{font-size:18px;font-weight:600}
+.detail{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:12px;background:#fff}
+.detail h4{margin:0 0 6px;font-size:13.5px}
+.detail .meta{color:var(--text2);font-size:12px;margin-bottom:10px}
+.detail .close{float:right}
+.mini td{padding:3px 6px;font-size:12px}
+.hcell{text-align:right;font-size:11.5px}
+.ins-groups{display:grid;gap:16px}
+.ins-area{font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px}
+.ins{border:1px solid var(--grid);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;background:#fff}
+.ins.dq{border-left-color:var(--muted)}
+.ins h4{margin:0 0 4px;font-size:13.5px}
+.ins p{margin:0 0 6px}
+.ins p.d{color:var(--text2);font-size:12.5px}
+.ins .lk{display:flex;flex-wrap:wrap;gap:6px 12px}
+.ins .lk a{color:var(--accent);cursor:pointer;font-size:12.5px;text-decoration:none}
+.ins .lk a:hover{text-decoration:underline}
+.ins .lk.list{flex-direction:column;gap:3px}
+.readnote{border:1px solid #e9d7b5;background:#fdf8ee;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:12.5px}
+.readnote b.h{display:block;margin-bottom:4px;font-size:13px}
+.readnote ul{margin:4px 0 0;padding-left:18px}.readnote li{margin:3px 0;color:var(--text2)}.readnote li b{color:var(--text)}
+.idx{position:relative;height:8px;min-width:90px;width:100%}
+.idx i{position:absolute;left:0;top:0;height:8px;background:var(--accent);border-radius:0 4px 4px 0}
+.idx s{position:absolute;top:-3px;width:1px;height:14px;background:var(--text)}
+tr.small td{color:var(--muted)}
+.warn{color:var(--warn);font-size:12.5px}
+details.card summary{cursor:pointer;font-weight:600;font-size:14px}
+details.card li{margin:4px 0;color:var(--text2)}
+details.card b{color:var(--text)}
+#tip{position:fixed;pointer-events:none;background:#1a1a19;color:#f0efec;font-size:12px;padding:7px 9px;border-radius:6px;white-space:pre-line;max-width:320px;z-index:100;display:none;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.muted{color:var(--muted)}
+.right{text-align:right}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.row input[type=search]{font:inherit;padding:5px 9px;border:1px solid var(--line);border-radius:7px;min-width:240px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <h1>Online SD · Where the time goes</h1>
+    <p class="sub" id="subtitle">iTime × Efficiency (closed projects) · Pavlina Nikolova's org</p>
+  </div>
+  <div>
+    <div class="uploads">
+      <label class="file"><input type="file" id="fIt" accept=".csv,.txt"><b>1 · iTime CSV</b><em id="sIt">not loaded</em></label>
+      <label class="file"><input type="file" id="fEf" accept=".xlsx,.xlsm,.xls,.csv"><b>2 · Efficiency xlsx</b><em id="sEf">not loaded</em></label>
+    </div>
+    <div id="status"></div>
+  </div>
+</header>
+
+<div id="empty" class="empty">
+  <h2>Load the two exports to start</h2>
+  <div>Nothing leaves your browser — the files are read locally.</div>
+  <ol>
+    <li><b>iTime</b> — EmployeeTimeReport.csv (one file for the whole period; hub-wide export is fine; the page keeps only the selected org).</li>
+    <li><b>Efficiency</b> — the Efficiency workbook (the page reads the <i>Efficiency</i> sheet: closed projects with complexity, type, client country, timings).</li>
+  </ol>
+</div>
+
+<div id="app" hidden>
+  <nav class="filters" id="filters"></nav>
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card" id="sec-ins">
+    <div class="row" style="margin:0;justify-content:space-between">
+      <h2 id="insHead" style="cursor:pointer;user-select:none"><span id="insChev">▸</span> Key insights <span class="muted" id="insCount" style="font-weight:500"></span><span class="scope">people filters</span></h2>
+      <div><button class="btn" id="insToggle">Show insights</button> <button class="btn" id="insCopy">Copy as text</button></div>
+    </div>
+    <div id="insBody" hidden>
+      <p class="sub" style="margin-top:8px">Generated from the data by fixed rules for the current Manager / Person / Role / period selection — re-read when you change filters. Every number can be checked in the sections below.</p>
+      <div id="ins" class="ins-groups"></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec-comp">
+    <h2>Where the time goes<span class="scope">people filters</span></h2>
+    <p class="sub">All logged hours except leave and holidays (= net working hours), split by what they were logged on. Project filters and the task filter don't apply here, so this always shows the whole time. Recent months lean to "Open / other projects" because jobs still in field are not in the closed-projects file yet.</p>
+    <div class="grid2">
+      <div><div id="compBar"></div><div id="compTable"></div></div>
+      <div><h3 style="margin-top:0">By month · % of net working hours</h3><div id="compMonths"></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="sec-tasks">
+    <h2>Tasks by role<span class="scope">all filters</span></h2>
+    <p class="sub">iTime task × role (SW / QA), leave excluded. Non-project tasks (Admin project) are tagged. Click a task to filter the whole page by it.</p>
+    <div id="tasks"></div>
+  </section>
+
+  <section class="card" id="sec-cx">
+    <h2>Closed projects by complexity<span class="scope">all filters · one project type</span></h2>
+    <p class="sub">Hours our people logged per JobBook (wave), compared across complexity levels within one Project Type. Click a level to filter the page by it.</p>
+    <div id="cx"></div>
+  </section>
+
+  <section class="card" id="sec-changes">
+    <h2>Client changes<span class="scope">all filters except task &amp; group · closed projects</span></h2>
+    <p class="sub">Where client-change work comes from: hours our people logged on the iTime task "Client changes work", and the number of change rounds recorded in Zoho (DIARY Client Changes), per closed project. Click a row to see the projects behind it.</p>
+    <div class="readnote">
+      <b class="h">How to read this — and what to watch out for</b>
+      <ul>
+        <li><b>Project mix drives the raw numbers.</b> Monthly trackers get few changes, ad hocs and templates many. A team or market with lots of trackers looks better on "Change h / project" and "% of hours" without working differently. Compare within one Project Type, or use <b>vs expected</b>: actual change hours ÷ what comparable projects (same type &amp; complexity) average. 1.00× = as expected; 1.50× = 50% more change work than comparable projects.</li>
+        <li><b>A few heavy projects can carry a whole group.</b> Open the group and check its top projects before drawing a conclusion. Groups with fewer than 10 projects are greyed out — too small to read.</li>
+        <li><b>Rounds are only as good as Zoho logging.</b> "Rounds" is the DIARY Client Changes count as recorded. A 0 can mean no changes or not logged, and logging habits can differ between PM teams — see the "0 rounds" column.</li>
+        <li><b>Hours are only as good as iTime booking.</b> Only hours booked on "Client changes work" count. Changes booked as "Job set-up", "Validation" or "Other tasks on project" are invisible here, so real change effort is higher than shown.</li>
+        <li><b>Coverage is partial.</b> Closed projects only (open jobs and programs have no Zoho data here — see "Not covered"), only our people's hours, only hours inside the iTime file. Client country = the ordering market, not the end client.</li>
+        <li><b>PM team is the channel, not the source.</b> Changes come from the client and RE; the PM team passes them on. Use this to decide where to tighten the process (questionnaire freeze, fewer consolidated rounds, a change budget in the quote) — not to rank PMs.</li>
+      </ul>
+    </div>
+    <div id="changes"></div>
+  </section>
+
+  <section class="card" id="sec-proj">
+    <h2>Projects<span class="scope">all filters</span></h2>
+    <p class="sub">Every job our people logged project hours on. Group comes from the Efficiency file (closed projects) or from the naming rules (everything else). Click a row for people × tasks.</p>
+    <div id="proj"></div>
+  </section>
+
+  <section class="card" id="sec-weeks">
+    <h2>Admin-heavy weeks<span class="scope">people filters</span></h2>
+    <p class="sub">Per person and week: admin share = (Administration and management + other non-project) ÷ net working hours. Weeks with fewer than 16 net hours are not judged. Phase = where that person's closed projects stood that week (Efficiency dates).</p>
+    <div id="weeks"></div>
+  </section>
+
+  <section class="card" id="sec-people">
+    <h2>People<span class="scope">people filters</span></h2>
+    <p class="sub">One row per person in scope (TL / Managers / Directors excluded). Click a row to filter the page by that person.</p>
+    <div id="people"></div>
+  </section>
+
+  <details class="card" id="sec-method">
+    <summary>Method &amp; definitions</summary>
+    <ul>
+      <li><b>Scope</b> — iTime rows whose <i>Direct Manager</i> (on that row) sits in the selected org root's tree. Moving people count only for the period they were in the org. Titles with Manager / Team Leader / Director are excluded.</li>
+      <li><b>iTime file</b> — UTF-8 and Windows-1252 rows are both read (the 2026 file is two exports joined: Jan–May and Jun–Nov). Rows with 0 hours are ignored. Name fixes live in CONFIG.NAME_ALIASES.</li>
+      <li><b>Role</b> — QA if the title contains "Quality Assurance", otherwise SW (SW Account Leads count as SW).</li>
+      <li><b>Net working hours</b> — all logged hours minus leave &amp; holidays (vacation, company holiday, illness, authorised/paid/unpaid leave, office closure). This is a share of <i>logged</i> time, not the BI chargeability formula.</li>
+      <li><b>Admin &amp; management</b> — Admin project, task "Administration and management". <b>Training</b> — Admin project, training / trainer tasks. <b>Other non-project</b> — any other Admin task and the GOH BG On Bench codes.</li>
+      <li><b>Closed projects</b> — job number (hyphens removed) found in the Efficiency sheet; complexity, type, client country and timings come from there.</li>
+      <li><b>Not in Efficiency</b> — grouped by naming rules (editable in CONFIG at the top of the script): <i>Internal / SD dev</i> (P-codes, 24-072885-*, NGIE, Kalever, Metaforms, Consultancy); <i>Pooled admin jobs</i> (names with "admin" or "Flex jobs"); <i>Programs</i> (Coca-Cola/Coke, FRS, BAT, JTI, PMI, Imperial, MTN, Essilor, Pernod Ricard, BP); everything else is <i>Open / other projects</i>.</li>
+      <li><b>Complexity comparison</b> — per JobBook, only hours logged by in-scope people inside the iTime file. Projects that started programming before the data year (the year holding most of the file's hours) miss their earlier hours, so they are off by default; the comparisons in Key insights and Client changes use the same rule.</li>
+      <li><b>Client changes</b> — closed projects only. Change hours = iTime task "Client changes work" by in-scope people; rounds = Zoho DIARY Client Changes. Expected change hours per project = mean change hours of closed projects with the same type &amp; complexity (≥ 5 projects; otherwise same type, otherwise all). "Total h vs comparable" = project hours ÷ median hours of the same peer group, averaged over the group's projects.</li>
+      <li><b>Phases</b> — set-up = from SW assignment (or, when the assignment date is after the 1st link, the first hour logged on the job) to the 1st link to RE; changes = 1st link to launch; field = launch to the end of the close-field month. A person's pipeline = closed projects where they are lead SW/QA in Efficiency or logged ≥ 4 h. Open projects and programs have no dates, so a week can be "No tracked project" while the person still worked on them.</li>
+    </ul>
+  </details>
+</div>
+</div>
+<div id="tip"></div>
+<script>
+/* ===================== CONFIG — edit here ===================== */
+const CONFIG = {
+  // Default org root: everyone whose Direct Manager (on the iTime row) sits in this person's tree
+  ROOT: 'Pavlina Nikolova',
+  // Titles excluded from the analysis (still usable as Manager filter values)
+  LEAD_TITLE_RE: /manager|team leader|director/i,
+  // Titles counted as QA; every other in-scope title counts as SW (incl. SW Account Lead)
+  QA_TITLE_RE: /quality assurance/i,
+  // Admin-project tasks that are leave/holidays (removed from net working hours)
+  LEAVE_TASK_RE: /vacation|holiday|illness|leave|office closure/i,
+  // Admin-project tasks that are training
+  TRAINING_TASK_RE: /training|trainer/i,
+  // Admin-project task that is "Administration and management"
+  ADMIN_TASK_RE: /^administration and management$/i,
+  // Project codes treated as non-project (bench)
+  BENCH_PROJECTS: ['18-069151-01', '18-069151-02'],
+  // Groups for project jobs NOT found in the Efficiency file (first match wins)
+  GROUP_RULES: [
+    { group: 'Internal / SD dev', test: (no, name) => /^P\d/i.test(no) || /^24-072885/.test(no) || /NGIE|Kalever|Metaforms|Consultancy/i.test(name) },
+    { group: 'Pooled admin jobs', test: (no, name) => /admin|flex jobs/i.test(name) },
+    { group: 'Programs', test: (no, name) => /coke|coca|essilor|pernod|imperial/i.test(name) || /(^|[^a-z])(FRS|BAT|JTI|PMI|MTN|BP)([^a-z]|$)/i.test(name) },
+  ],
+  DEFAULT_UNMATCHED_GROUP: 'Open / other projects',
+  // A person-week needs at least this many net hours to be judged for admin share
+  MIN_WEEK_NET_HOURS: 16,
+  // iTime spelling fixes (the Jun–Nov export writes some Cyrillic letters as "?")
+  NAME_ALIASES: { 'Aleksand?r Tsonev': 'Aleksandar Tsonev' },
+  // A closed project counts in a person's pipeline if they are its lead SW/QA in Efficiency or logged at least this many hours on it
+  PIPELINE_MIN_HOURS: 4,
+};
+
+/* Time categories in fixed order (colour follows the category, never its rank) */
+const CATS = [
+  { key: 'closed',  label: 'Closed projects',        project: true },
+  { key: 'open',    label: 'Open / other projects',  project: true },
+  { key: 'program', label: 'Programs',               project: true },
+  { key: 'pooled',  label: 'Pooled admin jobs',      project: true },
+  { key: 'internal',label: 'Internal / SD dev',      project: true },
+  { key: 'admin',   label: 'Admin & management',     project: false },
+  { key: 'training',label: 'Training',               project: false },
+  { key: 'other',   label: 'Other non-project',      project: false },
+];
+const CAT_IDX = Object.fromEntries(CATS.map((c, i) => [c.key, i]));
+const LEAVE = -1;
+const GROUP_TO_CAT = { 'Closed projects': 'closed', 'Open / other projects': 'open', 'Programs': 'program', 'Pooled admin jobs': 'pooled', 'Internal / SD dev': 'internal' };
+
+const PHASES = ['Had a project in set-up', 'Only changes phase', 'Only field phase', 'No tracked project'];
+
+/* ===================== helpers ===================== */
+const clean = s => (s == null ? '' : String(s)).replace(/\s+/g, ' ').trim();
+const titleCase = s => clean(s).toLowerCase().replace(/(^|[\s\-'’])([^\s\-'’])/g, (m, a, b) => a + b.toUpperCase());
+const alias = n => CONFIG.NAME_ALIASES[n] || n;
+const nameKey = s => clean(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s*-\s*/g, '-');
+function normDate(s) {
+  s = clean(s);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  let m = s.match(/^(\d{2})-(\d{2})-(\d{2})$/);          // dd-mm-yy (seen in a few rows)
+  if (m) return '20' + m[3] + '-' + m[2] + '-' + m[1];
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);         // m/d/yyyy
+  if (m) return m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0');
+  return '';
+}
+const dayNum = iso => iso ? Math.floor(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 86400000) : null;
+const isoFromDay = n => new Date(n * 86400000).toISOString().slice(0, 10);
+function toIso(v) {
+  if (v == null || v === '') return '';
+  if (v instanceof Date && !isNaN(v)) return new Date(v.getTime() + 12 * 3600000).toISOString().slice(0, 10);
+  if (typeof v === 'number') return isoFromDay(Math.round(v) - 25569);   // Excel serial
+  return normDate(String(v));
+}
+function canonTask(t) {
+  const c = clean(t);
+  const k = c.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const MAP = {
+    qctestsdummytroubleshoot: 'QC tests / dummy / troubleshoot',
+    clientandvendormeetingsco: 'Client & vendor meetings / comms',
+    internalbriefingkickoffmeet: 'Internal briefing / kickoff meeting',
+    administrativedocumentation: 'Administrative documentation',
+    virtualtrainingelearningl: 'Virtual training (e-learning)',
+    facetofaceinpersontrain: 'Face-to-face training',
+  };
+  return MAP[k] || c;
+}
+function median(arr) {
+  if (!arr.length) return 0;
+  const a = arr.slice().sort((x, y) => x - y), m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+
+/* ===================== iTime ===================== */
+// The iTime export can mix UTF-8 rows with Windows-1252 rows (two exports pasted together): decode both.
+function mixedDecode(u8) {
+  const utf = new TextDecoder('utf-8', { fatal: true });
+  try { return utf.decode(u8); } catch (e) { /* mixed file */ }
+  const cp = new TextDecoder('windows-1252'), out = [];
+  let start = 0, i = 0; const n = u8.length;
+  while (i < n) {
+    const b = u8[i];
+    if (b < 0x80) { i++; continue; }
+    const len = b >= 0xc2 && b <= 0xdf ? 2 : b >= 0xe0 && b <= 0xef ? 3 : b >= 0xf0 && b <= 0xf4 ? 4 : 0;
+    let ok = len > 0 && i + len <= n;
+    for (let k = 1; ok && k < len; k++) if ((u8[i + k] & 0xc0) !== 0x80) ok = false;
+    if (ok) { i += len; continue; }
+    out.push(utf.decode(u8.subarray(start, i)), cp.decode(u8.subarray(i, i + 1)));
+    i++; start = i;
+  }
+  out.push(utf.decode(u8.subarray(start)));
+  return out.join('');
+}
+// rawRows: array of arrays (first row = header). Returns compact row store.
+function ingestITime(rawRows) {
+  const head = rawRows[0].map(clean);
+  const col = n => head.indexOf(n);
+  const I = { fn: col('FName'), ln: col('LName'), ti: col('Title'), mg: col('Direct Manager'), we: col('Week End'), dt: col('Date'), pn: col('Project #'), pj: col('Project'), tk: col('Task'), hr: col('Hours') };
+  for (const k in I) if (I[k] < 0) throw new Error('iTime file: column not found for ' + k + ' (' + JSON.stringify(head) + ')');
+  const out = [];
+  for (let r = 1; r < rawRows.length; r++) {
+    const a = rawRows[r];
+    if (!a || a.length < head.length - 2) continue;
+    const h = parseFloat(String(a[I.hr]).replace(',', '.'));
+    if (!isFinite(h) || h === 0) continue;
+    const date = normDate(a[I.dt]);
+    if (!date) continue;
+    let we = normDate(a[I.we]);
+    if (!we) { const d = dayNum(date); we = isoFromDay(d + ((7 - ((d + 4) % 7)) % 7)); }
+    out.push({
+      name: alias(titleCase(clean(a[I.fn]) + ' ' + clean(a[I.ln]))),
+      title: clean(a[I.ti]),
+      mgr: alias(titleCase(a[I.mg])),
+      date, week: we,
+      proj: clean(a[I.pn]), pname: clean(a[I.pj]),
+      task: canonTask(a[I.tk]), h,
+    });
+  }
+  return out;
+}
+
+/* ===================== Efficiency ===================== */
+function ingestEfficiency(objs) {
+  const map = new Map();
+  const get = (o, k) => { for (const key in o) if (clean(key) === k) return o[key]; return null; };
+  for (const o of objs) {
+    const jbRaw = get(o, 'GEN_INFO JobBook');
+    if (jbRaw == null || jbRaw === '') continue;
+    const jb = String(jbRaw).replace(/\.0+$/, '').replace(/\D/g, '');
+    if (!jb) continue;
+    const cx = clean(get(o, 'Project Complexity'));
+    const cy = +get(o, 'YEAR Actual Close Field'), cm = +get(o, 'MONTH Actual Close Field');
+    const closeEnd = cy && cm ? isoFromDay(Math.floor(Date.UTC(cy, cm, 0) / 86400000)) : '';
+    const rec = {
+      jb, pid: clean(get(o, 'Project ID')), name: clean(get(o, 'GEN_INFO Project Name')),
+      cx: cx || 'Closed – no complexity', cxLevel: parseInt(cx) || null,
+      type: clean(get(o, 'GEN_INFO Project Type')) || '—',
+      client: clean(get(o, 'GEN_INFO Client Country')) || '—',
+      sl: clean(get(o, 'GEN_INFO Service Line')) || '—',
+      template: clean(get(o, 'GEN_INFO Product Template Wizard')) || '—',
+      startYear: +get(o, 'YEAR Actual Start Programming') || null,
+      startMonth: +get(o, 'MONTH Actual Start Programming') || null,
+      assign: toIso(get(o, 'TIMING Actual SW Assignment')),
+      firstLink: toIso(get(o, 'TIMING Actual 1st link to RE')),
+      launch: toIso(get(o, 'TIMING Actual Launch Field')),
+      closeEnd,
+      sw: clean(get(o, 'TEAM SW')), swTeam: clean(get(o, 'TEAM SW Team')),
+      pm: titleCase(get(o, 'TEAM PM')) || '—', pmTeam: clean(get(o, 'TEAM PM Team')) || '—',
+      qa: clean(get(o, 'TEAM QA')), qaTeam: clean(get(o, 'TEAM QA Team')),
+      changes: get(o, 'DIARY Client Changes'), efld: get(o, 'EFLD'), loi: get(o, 'GEN_INFO Initial LOI'),
+    };
+    const prev = map.get(jb);
+    if (!prev || (!prev.cxLevel && rec.cxLevel)) map.set(jb, rec);
+  }
+  return map;
+}
+
+/* ===================== Model ===================== */
+function buildModel(itRows, effMap, root) {
+  root = root || CONFIG.ROOT;
+  // hierarchy from (manager -> person) pairs on any row
+  const kids = new Map();
+  for (const r of itRows) { if (!kids.has(r.mgr)) kids.set(r.mgr, new Set()); kids.get(r.mgr).add(r.name); }
+  const scopeMgrs = new Set([root]);
+  const stack = [root];
+  while (stack.length) { const m = stack.pop(); for (const c of (kids.get(m) || [])) if (kids.has(c) && !scopeMgrs.has(c)) { scopeMgrs.add(c); stack.push(c); } }
+
+  const people = [], pIdx = new Map(), mgrs = [], mIdx = new Map(), jobs = [], jIdx = new Map(), tasks = [], tIdx = new Map();
+  const idx = (arr, map, key, mk) => { let i = map.get(key); if (i === undefined) { i = arr.length; arr.push(mk()); map.set(key, i); } return i; };
+  const rows = [];
+  let leadHours = 0;
+  for (const r of itRows) {
+    if (!scopeMgrs.has(r.mgr)) continue;
+    if (CONFIG.LEAD_TITLE_RE.test(r.title) || r.name === root) { leadHours += r.h; continue; }
+    const p = idx(people, pIdx, r.name, () => ({ name: r.name, title: r.title, role: CONFIG.QA_TITLE_RE.test(r.title) ? 'QA' : 'SW', key: nameKey(r.name), mgrs: new Set() }));
+    const m = idx(mgrs, mIdx, r.mgr, () => r.mgr);
+    people[p].mgrs.add(r.mgr); people[p].lastMgr = r.mgr; people[p].title = r.title;
+    const t = idx(tasks, tIdx, r.task, () => r.task);
+    let c, j = -1;
+    if (/^admin$/i.test(r.proj)) {
+      if (CONFIG.LEAVE_TASK_RE.test(r.task)) c = LEAVE;
+      else if (CONFIG.TRAINING_TASK_RE.test(r.task)) c = CAT_IDX.training;
+      else if (CONFIG.ADMIN_TASK_RE.test(r.task)) c = CAT_IDX.admin;
+      else c = CAT_IDX.other;
+    } else if (CONFIG.BENCH_PROJECTS.includes(r.proj)) {
+      c = CAT_IDX.other;
+    } else {
+      j = idx(jobs, jIdx, r.proj, () => {
+        const jb = r.proj.replace(/-/g, '');
+        const eff = effMap ? effMap.get(jb) || null : null;
+        let group = 'Closed projects';
+        if (!eff) { group = CONFIG.DEFAULT_UNMATCHED_GROUP; for (const g of CONFIG.GROUP_RULES) if (g.test(r.proj, r.pname)) { group = g.group; break; } }
+        return { no: r.proj, name: eff ? eff.name || r.pname : r.pname, jb, eff, group };
+      });
+      c = CAT_IDX[GROUP_TO_CAT[jobs[j].group]];
+    }
+    rows.push({ p, m, mo: r.date.slice(0, 7), d: r.date, w: r.week, j, t, c, h: r.h });
+  }
+  // Pipeline of closed projects per person: lead SW / lead QA in Efficiency, or >= PIPELINE_MIN_HOURS logged on the job.
+  // Phase windows: set-up = [start, 1st link), changes = [1st link, launch), field = [launch, end of close month].
+  // Set-up start = SW assignment if it is before the 1st link, else the first hour any in-scope person logged on the job.
+  const assigned = new Map();
+  if (effMap) {
+    const firstLog = new Map(), personJob = new Map();
+    for (const r of rows) {
+      if (r.j < 0 || !jobs[r.j].eff) continue;
+      const jb = jobs[r.j].jb;
+      if (!firstLog.has(jb) || r.d < firstLog.get(jb)) firstLog.set(jb, r.d);
+      const k = r.p + '|' + jb; personJob.set(k, (personJob.get(k) || 0) + r.h);
+    }
+    const win = e => {
+      let A = dayNum(e.assign); const F = dayNum(e.firstLink), L = dayNum(e.launch), C = dayNum(e.closeEnd);
+      if (A == null || F == null || A >= F) { const fl = dayNum(firstLog.get(e.jb)); A = fl != null && F != null && fl < F ? fl : null; }
+      return { e, setup: A != null ? [A, F - 1] : null, changes: F != null && L != null && F < L ? [F, L - 1] : null, field: L != null && C != null && L <= C ? [L, C] : null };
+    };
+    const keyToP = new Map(people.map((p, i) => [p.key, i]));
+    const add = (pi, e) => { if (!assigned.has(pi)) assigned.set(pi, new Map()); if (!assigned.get(pi).has(e.jb)) assigned.get(pi).set(e.jb, win(e)); };
+    for (const e of effMap.values()) for (const who of [e.sw, e.qa]) { const pi = keyToP.get(nameKey(who)); if (pi !== undefined) add(pi, e); }
+    for (const [k, h] of personJob) if (h >= CONFIG.PIPELINE_MIN_HOURS) { const [pi, jb] = k.split('|'); add(+pi, effMap.get(jb)); }
+    for (const [pi, m] of assigned) assigned.set(pi, [...m.values()]);
+  }
+  const months = [...new Set(rows.map(r => r.mo))].sort();
+  // Data year = the calendar year holding most of the logged hours (robust to a few rows from the next/previous year)
+  const yh = new Map(); for (const r of (rows.length ? rows : itRows.map(x => ({ d: x.date, h: x.h })))) { const y = +r.d.slice(0, 4); yh.set(y, (yh.get(y) || 0) + r.h); }
+  const year = [...yh.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || new Date().getFullYear();
+  return { rows, people, mgrs, jobs, tasks, months, year, assigned, scopeMgrs: [...scopeMgrs], root, leadHours, hasEff: !!effMap };
+}
+
+/* ===================== Filtering & aggregation ===================== */
+function peoplePass(M, r, f) {
+  if (f.mgr && M.mgrs[r.m] !== f.mgr) return false;
+  if (f.person && M.people[r.p].name !== f.person) return false;
+  if (f.role && M.people[r.p].role !== f.role) return false;
+  if (f.from && r.mo < f.from) return false;
+  if (f.to && r.mo > f.to) return false;
+  return true;
+}
+function projectFiltersOn(f) { return !!(f.group || f.cx || f.ptype || f.client); }
+function projectPass(M, r, f) {
+  if (f.task && M.tasks[r.t] !== f.task) return false;
+  if (!projectFiltersOn(f)) return true;
+  if (r.j < 0) return false;
+  const J = M.jobs[r.j], e = J.eff;
+  if (f.group && J.group !== f.group) return false;
+  if (f.cx && (!e || e.cx !== f.cx)) return false;
+  if (f.ptype && (!e || e.type !== f.ptype)) return false;
+  if (f.client && (!e || e.client !== f.client)) return false;
+  return true;
+}
+
+function aggComposition(M, f) {
+  const tot = new Array(CATS.length).fill(0), byMonth = {}, persons = new Set();
+  let leave = 0;
+  for (const r of M.rows) {
+    if (!peoplePass(M, r, f)) continue;
+    persons.add(r.p);
+    if (r.c === LEAVE) { leave += r.h; continue; }
+    tot[r.c] += r.h;
+    (byMonth[r.mo] = byMonth[r.mo] || new Array(CATS.length).fill(0))[r.c] += r.h;
+  }
+  const net = tot.reduce((a, b) => a + b, 0);
+  return { tot, net, leave, byMonth, persons: persons.size };
+}
+
+function aggTasks(M, f) {
+  const by = new Map();
+  let total = 0;
+  for (const r of M.rows) {
+    if (r.c === LEAVE || !peoplePass(M, r, f) || !projectPass(M, r, f)) continue;
+    const k = r.t;
+    let o = by.get(k); if (!o) { o = { task: M.tasks[k], SW: 0, QA: 0, project: 0, nonproject: 0 }; by.set(k, o); }
+    o[M.people[r.p].role] += r.h;
+    if (r.j >= 0) o.project += r.h; else o.nonproject += r.h;
+    total += r.h;
+  }
+  const list = [...by.values()].map(o => ({ ...o, total: o.SW + o.QA, isProject: o.project >= o.nonproject })).sort((a, b) => b.total - a.total);
+  return { list, total, sw: list.reduce((a, o) => a + o.SW, 0), qa: list.reduce((a, o) => a + o.QA, 0) };
+}
+
+function aggProjects(M, f) {
+  const by = new Map();
+  for (const r of M.rows) {
+    if (r.j < 0 || !peoplePass(M, r, f) || !projectPass(M, r, f)) continue;
+    let o = by.get(r.j);
+    if (!o) { o = { j: r.j, h: 0, SW: 0, QA: 0, people: new Set(), tasks: new Map() }; by.set(r.j, o); }
+    o.h += r.h; o[M.people[r.p].role] += r.h; o.people.add(r.p);
+    o.tasks.set(r.t, (o.tasks.get(r.t) || 0) + r.h);
+  }
+  return [...by.values()].map(o => {
+    let top = -1, th = 0; for (const [t, h] of o.tasks) if (h > th) { th = h; top = t; }
+    return { ...o, nPeople: o.people.size, topTask: top >= 0 ? M.tasks[top] : '', topShare: o.h ? th / o.h : 0 };
+  }).sort((a, b) => b.h - a.h);
+}
+
+// Complexity comparison: closed projects of one Project Type, per JobBook
+function aggComplexity(M, f, opts) {
+  const ff = { ...f, cx: '' };            // compare across complexity levels
+  const per = new Map(), taskTot = new Map();
+  for (const r of M.rows) {
+    if (r.j < 0) continue;
+    const J = M.jobs[r.j], e = J.eff;
+    if (!e || e.type !== f.ptype) continue;
+    if (opts.startedInYear && e.startYear !== M.year) continue;
+    if (!peoplePass(M, r, ff) || !projectPass(M, r, ff)) continue;
+    let o = per.get(r.j); if (!o) { o = { e, h: 0, SW: 0, QA: 0, tasks: new Map() }; per.set(r.j, o); }
+    o.h += r.h; o[M.people[r.p].role] += r.h; o.tasks.set(r.t, (o.tasks.get(r.t) || 0) + r.h);
+    taskTot.set(r.t, (taskTot.get(r.t) || 0) + r.h);
+  }
+  const topTasks = [...taskTot.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
+  const levels = new Map();
+  for (const o of per.values()) {
+    const k = o.e.cx;
+    let L = levels.get(k); if (!L) { L = { cx: k, lvl: o.e.cxLevel || 99, jobs: [], h: 0, SW: 0, QA: 0, changes: [], tasks: new Map() }; levels.set(k, L); }
+    L.jobs.push(o.h); L.h += o.h; L.SW += o.SW; L.QA += o.QA;
+    if (o.e.changes != null && o.e.changes !== '' && isFinite(+o.e.changes)) L.changes.push(+o.e.changes);
+    for (const [t, h] of o.tasks) L.tasks.set(t, (L.tasks.get(t) || 0) + h);
+  }
+  const list = [...levels.values()].sort((a, b) => a.lvl - b.lvl).map(L => {
+    const n = L.jobs.length;
+    const mix = topTasks.map(t => (L.tasks.get(t) || 0) / L.h);
+    const other = 1 - mix.reduce((a, b) => a + b, 0);
+    return { cx: L.cx, n, h: L.h, avg: L.h / n, med: median(L.jobs), sw: L.SW / n, qa: L.QA / n, chg: L.changes.length ? L.changes.reduce((a, b) => a + b, 0) / L.changes.length : null, mix, other };
+  });
+  return { list, topTasks: topTasks.map(t => M.tasks[t]) };
+}
+
+function phaseOf(asg, ws, we) {
+  let best = 3;
+  for (const a of asg) {
+    const hit = iv => iv && iv[0] <= we && iv[1] >= ws;
+    if (hit(a.setup)) return 0;
+    if (hit(a.changes)) best = Math.min(best, 1);
+    else if (hit(a.field)) best = Math.min(best, 2);
+  }
+  return best;
+}
+
+// Person-weeks with admin share
+function aggWeeks(M, f, threshold) {
+  const pw = new Map();
+  for (const r of M.rows) {
+    if (!peoplePass(M, r, f)) continue;
+    const k = r.p + '|' + r.w;
+    let o = pw.get(k); if (!o) { o = { p: r.p, w: r.w, net: 0, admin: 0, leave: 0, mgr: r.m }; pw.set(k, o); }
+    if (r.c === LEAVE) { o.leave += r.h; continue; }
+    o.net += r.h;
+    if (r.c === CAT_IDX.admin || r.c === CAT_IDX.other) o.admin += r.h;
+  }
+  const list = [];
+  for (const o of pw.values()) {
+    o.share = o.net ? o.admin / o.net : 0;
+    o.judged = o.net >= CONFIG.MIN_WEEK_NET_HOURS;
+    o.flag = o.judged && o.share >= threshold;
+    const we = dayNum(o.w), ws = we - 6;
+    o.phase = phaseOf(M.assigned.get(o.p) || [], ws, we);
+    list.push(o);
+  }
+  return list;
+}
+
+function weekDetail(M, p, w) {
+  const rows = M.rows.filter(r => r.p === p && r.w === w);
+  const tasks = new Map(), projs = new Map();
+  let net = 0, leave = 0, admin = 0;
+  for (const r of rows) {
+    if (r.c === LEAVE) { leave += r.h; continue; }
+    net += r.h; if (r.c === CAT_IDX.admin || r.c === CAT_IDX.other) admin += r.h;
+    tasks.set(M.tasks[r.t], (tasks.get(M.tasks[r.t]) || 0) + r.h);
+    if (r.j >= 0) projs.set(r.j, (projs.get(r.j) || 0) + r.h);
+  }
+  const we = dayNum(w), ws = we - 6;
+  const label = a => { const hit = iv => iv && iv[0] <= we && iv[1] >= ws; return hit(a.setup) ? 'Set-up' : hit(a.changes) ? 'Changes' : hit(a.field) ? 'Field' : null; };
+  const active = (M.assigned.get(p) || []).map(a => ({ e: a.e, ph: label(a) })).filter(x => x.ph);
+  return { net, leave, admin, tasks: [...tasks.entries()].sort((a, b) => b[1] - a[1]), projs: [...projs.entries()].sort((a, b) => b[1] - a[1]).map(([j, h]) => ({ J: M.jobs[j], h })), active };
+}
+
+if (typeof module !== 'undefined') module.exports = { mixedDecode, CONFIG, CATS, CAT_IDX, LEAVE, PHASES, ingestITime, ingestEfficiency, buildModel, aggComposition, aggTasks, aggProjects, aggComplexity, aggWeeks, weekDetail, peoplePass, projectPass, normDate, nameKey, titleCase };
+
+/* ===================== Client changes ===================== */
+const CC_TASK = 'Client changes work';
+const CC_BY = { pmTeam: ['PM team', e => e.pmTeam], client: ['Client country', e => e.client], sl: ['Service line', e => e.sl], type: ['Project type', e => e.type] };
+// Closed projects only. Expected change hours = mean change hours of comparable projects (same type & complexity; falls back to type, then all).
+function aggChanges(M, f, byKey) {
+  const ff = { ...f, task: '', group: '' };
+  const per = new Map(); let uncovered = 0;
+  for (const r of M.rows) {
+    if (r.j < 0 || M.tasks[r.t] === undefined) continue;
+    const isCC = M.tasks[r.t] === CC_TASK;
+    if (!peoplePass(M, r, ff)) continue;
+    const J = M.jobs[r.j];
+    if (!J.eff) { if (isCC && !projectFiltersOn(ff)) uncovered += r.h; continue; }
+    if (!projectPass(M, r, ff)) continue;
+    let o = per.get(r.j); if (!o) { o = { j: r.j, e: J.eff, h: 0, cc: 0, SW: 0, QA: 0 }; per.set(r.j, o); }
+    o.h += r.h; if (isCC) { o.cc += r.h; o[M.people[r.p].role] += r.h; }
+  }
+  const jobs = [...per.values()];
+  const grp = (kf) => { const g = new Map(); for (const o of jobs) { const k = kf(o.e); if (!g.has(k)) g.set(k, []); g.get(k).push(o); } return g; };
+  const byTC = grp(e => e.type + '|' + e.cx), byT = grp(e => e.type);
+  const stats = L => ({ n: L.length, ccMean: L.reduce((a, o) => a + o.cc, 0) / L.length, hMed: median(L.map(o => o.h)) });
+  const allS = jobs.length ? stats(jobs) : { n: 0, ccMean: 0, hMed: 0 };
+  const sTC = new Map([...byTC].map(([k, L]) => [k, stats(L)])), sT = new Map([...byT].map(([k, L]) => [k, stats(L)]));
+  for (const o of jobs) { const s = sTC.get(o.e.type + '|' + o.e.cx); const peer = s.n >= 5 ? s : sT.get(o.e.type).n >= 5 ? sT.get(o.e.type) : allS; o.expCC = peer.ccMean; o.peerH = peer.hMed; o.rounds = o.e.changes != null && o.e.changes !== '' && isFinite(+o.e.changes) ? +o.e.changes : null; }
+  const kf = CC_BY[byKey][1];
+  const groups = [...grp(kf)].map(([k, L]) => {
+    const n = L.length, cc = L.reduce((a, o) => a + o.cc, 0), h = L.reduce((a, o) => a + o.h, 0), exp = L.reduce((a, o) => a + o.expCC, 0);
+    const R = L.filter(o => o.rounds != null);
+    return { key: k, n, cc, h, SW: L.reduce((a, o) => a + o.SW, 0), QA: L.reduce((a, o) => a + o.QA, 0), ccPer: cc / n, share: h ? cc / h : 0, rounds: R.length ? R.reduce((a, o) => a + o.rounds, 0) / R.length : null, zeroRounds: R.filter(o => o.rounds === 0).length, idx: exp > 0 ? cc / exp : null, hIdx: L.reduce((a, o) => a + (o.peerH ? o.h / o.peerH : 1), 0) / n, jobs: L.sort((a, b) => b.cc - a.cc) };
+  }).sort((a, b) => b.cc - a.cc);
+  const tot = { n: jobs.length, cc: jobs.reduce((a, o) => a + o.cc, 0), h: jobs.reduce((a, o) => a + o.h, 0) };
+  const types = new Set(jobs.map(o => o.e.type));
+  return { groups, tot, uncovered, mixed: types.size > 1 };
+}
+
+/* ===================== Insights (rule-based, people filters only) ===================== */
+const seniorityOf = t => /account lead/i.test(t) ? 'AL' : /expert/i.test(t) ? 'Expert' : /senior/i.test(t) ? 'Senior' : /associate/i.test(t) ? 'Associate' : 'Mid';
+function buildInsights(M, f, thr) {
+  const pf = { mgr: f.mgr, person: f.person, role: f.role, from: f.from, to: f.to };
+  const P = x => (x * 100).toFixed(1) + '%', P0 = x => Math.round(x * 100) + '%', H = x => Math.round(x).toLocaleString('en-US');
+  const MONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], ML = m => MONS[+m.slice(5, 7) - 1];
+  const out = [];
+  const C = aggComposition(M, pf);
+  if (!C.net) return out;
+  const pm = new Set(); const months = new Set();
+  for (const r of M.rows) if (r.c !== LEAVE && peoplePass(M, r, pf)) { pm.add(r.p + '|' + r.mo); months.add(r.mo); }
+  const perPM = C.net / pm.size, fte = h => h / (perPM * months.size);
+  const adminH = C.tot[CAT_IDX.admin] + C.tot[CAT_IDX.other], adminS = adminH / C.net;
+  const projH = CATS.reduce((a, c, i) => a + (c.project ? C.tot[i] : 0), 0);
+
+  // role-level splits
+  const role = { SW: { n: 0, a: 0, t: 0, proj: 0, tasks: new Map() }, QA: { n: 0, a: 0, t: 0, proj: 0, tasks: new Map() } };
+  const sen = {}, byMgr = {};
+  for (const r of M.rows) {
+    if (r.c === LEAVE || !peoplePass(M, r, pf)) continue;
+    const pp = M.people[r.p], R = role[pp.role], isA = r.c === CAT_IDX.admin || r.c === CAT_IDX.other;
+    R.n += r.h; if (isA) R.a += r.h; if (r.c === CAT_IDX.training) R.t += r.h;
+    if (r.j >= 0) { R.proj += r.h; R.tasks.set(M.tasks[r.t], (R.tasks.get(M.tasks[r.t]) || 0) + r.h); }
+    const s = seniorityOf(pp.title); sen[s] = sen[s] || { n: 0, a: 0, p: new Set() }; sen[s].n += r.h; sen[s].p.add(r.p); if (isA) sen[s].a += r.h;
+    const m = M.mgrs[r.m]; byMgr[m] = byMgr[m] || { n: 0, a: 0, p: new Set() }; byMgr[m].n += r.h; byMgr[m].p.add(r.p); if (isA) byMgr[m].a += r.h;
+  }
+  const T = aggTasks(M, pf);
+  const rank = T.list.findIndex(o => o.task.toLowerCase() === 'administration and management') + 1;
+  const ahead = T.list.slice(0, Math.max(0, rank - 1)).map(o => o.task);
+
+  // 1 · admin size
+  const amH = C.tot[CAT_IDX.admin];
+  out.push({ area: 'Time & admin', key: 'admin', title: 'Admin is the gap to full utilisation',
+    text: `Admin & management takes **${P(amH / C.net)}** of net working hours — **${H(amH)} h**, about **${fte(amH).toFixed(1)} FTE** over the period.`,
+    detail: `Project work is ${P(projH / C.net)} and training ${P(C.tot[CAT_IDX.training] / C.net)}` + (pf.role ? '. ' : ` (SW ${P(role.SW.t / (role.SW.n || 1))}, QA ${P(role.QA.t / (role.QA.n || 1))}). `) + (rank ? `As a single task it ranks #${rank} of all logged work${ahead.length ? ', behind ' + ahead.join(' and ') : ''}.` : ''),
+    links: [{ label: 'Time split', act: { scroll: 'sec-comp' } }] });
+
+  // 2 · trend
+  const ms = Object.keys(C.byMonth).sort();
+  const nets = ms.map(m => C.byMonth[m].reduce((a, b) => a + b, 0));
+  const medNet = nets.slice().sort((a, b) => a - b)[nets.length >> 1] || 0;
+  const elig = ms.filter((m, i) => nets[i] >= 0.6 * medNet);
+  if (elig.length >= 6) {
+    const share = list => { let a = 0, n = 0, p = 0; for (const m of list) { const v = C.byMonth[m]; a += v[CAT_IDX.admin] + v[CAT_IDX.other]; n += v.reduce((x, y) => x + y, 0); p += CATS.reduce((s, c, i) => s + (c.project ? v[i] : 0), 0); } return { a: a / n, p: p / n }; };
+    const f3 = elig.slice(0, 3), l3 = elig.slice(-3), A = share(f3), B = share(l3);
+    const per = elig.map(m => ({ m, s: share([m]).a })), pk = per.reduce((a, b) => b.s > a.s ? b : a), lo = per.reduce((a, b) => b.s < a.s ? b : a);
+    const d = B.a - A.a;
+    out.push({ area: 'Time & admin', key: 'trend', title: Math.abs(d) < 0.03 ? 'Admin share is stable through the year' : d < 0 ? 'Admin share dropped in recent months' : 'Admin share is rising',
+      text: `Admin was **${P(A.a)}** in ${ML(f3[0])}–${ML(f3[2])} and **${P(B.a)}** in ${ML(l3[0])}–${ML(l3[2])}; project work moved from ${P(A.p)} to ${P(B.p)}.`,
+      detail: `Highest month ${ML(pk.m)} (${P(pk.s)}), lowest ${ML(lo.m)} (${P(lo.s)}).` + (d <= -0.03 ? ' The utilisation gap sits mostly in the earlier months — the current period is much fuller.' : d >= 0.03 ? ' Recent months carry more admin — check whether work intake dropped.' : ''),
+      links: [{ label: 'By month', act: { scroll: 'compMonths' } }] });
+  }
+
+  // 3 · admin-heavy weeks & concentration
+  const W = aggWeeks(M, pf, thr), J = W.filter(w => w.judged), F = J.filter(w => w.flag);
+  if (J.length >= 20) {
+    const cnt = new Map(); F.forEach(w => cnt.set(w.p, (cnt.get(w.p) || 0) + 1));
+    const ppl = new Set(J.map(w => w.p)).size, srt = [...cnt.values()].sort((a, b) => b - a), k = Math.max(1, Math.round(ppl / 4));
+    const topShare = F.length ? srt.slice(0, k).reduce((a, b) => a + b, 0) / F.length : 0;
+    const sv = Object.entries(sen).filter(([s, o]) => o.p.size >= 3 && s !== 'AL').map(([s, o]) => [s, o.a / o.n]);
+    const smin = Math.min(...sv.map(x => x[1])), smax = Math.max(...sv.map(x => x[1]));
+    const al = sen.AL && sen.AL.n ? sen.AL.a / sen.AL.n : null;
+    out.push({ area: 'Time & admin', key: 'weeks', title: ppl >= 5 ? 'Admin-heavy weeks cluster on a few people' : 'Admin-heavy weeks',
+      text: `**${P0(F.length / J.length)}** of person-weeks had ≥${P0(thr)} admin` + (ppl >= 5 ? `; **${k} of ${ppl} people** account for **${P0(topShare)}** of them.` : '.'),
+      detail: sv.length >= 2 ? (smax - smin <= 0.05 ? `Admin share is similar across seniority (${sv.map(([s, v]) => s + ' ' + P0(v)).join(', ')}), so this is person- or account-specific, not a level effect.` : `Admin share differs by seniority: ${sv.map(([s, v]) => s + ' ' + P0(v)).join(', ')}.`) + (al != null ? ` Account Leads: ${P0(al)} (coordination logged as admin).` : '') : '',
+      links: [{ label: 'People by admin-heavy weeks', act: { sortPeople: 'fw', scroll: 'sec-people' } }, { label: 'Person × week grid', act: { scroll: 'sec-weeks' } }] });
+
+    // 4 · phase hypothesis
+    const O = J.filter(w => !w.flag);
+    if (F.length >= 15 && O.length >= 15) {
+      const sh = (L, i) => L.filter(w => w.phase === i).length / L.length;
+      const cfF = sh(F, 1) + sh(F, 2), cfO = sh(O, 1) + sh(O, 2), suF = sh(F, 0), suO = sh(O, 0);
+      const diff = cfF - cfO;
+      out.push({ area: 'Time & admin', key: 'phase', title: diff >= 0.1 ? 'Admin weeks line up with waiting for changes' : 'Admin weeks are not explained by waiting for changes',
+        text: `In admin-heavy weeks **${P0(cfF)}** of people had only projects in changes/field phase, vs **${P0(cfO)}** in other weeks; **${P0(suF)}** still had a project in set-up (vs ${P0(suO)}).`,
+        detail: (diff >= 0.1 ? 'Admin rises when the pipeline holds only changes/field work — new set-ups are not being assigned in time.' : diff <= -0.1 ? 'Admin-heavy weeks happen even more often while a set-up is in progress — admin time is not people waiting for changes.' : 'On closed projects the phase mix barely differs — admin time is not mainly people waiting for changes.') + ' Open projects and programs have no dates, so this is indicative.',
+        links: [{ label: 'Phase table', act: { scroll: 'sec-weeks' } }] });
+    }
+  }
+
+  // 5 · team spread
+  const mg = Object.entries(byMgr).filter(([m, o]) => o.p.size >= 3).map(([m, o]) => [m, o.a / o.n]).sort((a, b) => b[1] - a[1]);
+  if (mg.length >= 2) {
+    const sp = mg[0][1] - mg[mg.length - 1][1];
+    out.push({ area: 'Time & admin', key: 'teams', title: sp <= 0.04 ? 'Admin share is similar across teams' : 'Admin share differs by team',
+      text: `By manager, admin ranges from **${P(mg[mg.length - 1][1])}** (${mg[mg.length - 1][0]}) to **${P(mg[0][1])}** (${mg[0][0]}).`,
+      detail: sp <= 0.04 ? 'A ' + (sp * 100).toFixed(1) + ' pp spread points to a department-wide pattern rather than one team.' : 'A ' + (sp * 100).toFixed(1) + ' pp spread — compare allocation practices between these teams.',
+      links: [{ label: 'By manager', act: { scroll: 'sec-weeks' } }] });
+  }
+
+  // 6 · role task mix (project time)
+  const top2 = R => [...R.tasks.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([t, h]) => `${t} ${P0(h / (R.proj || 1))}`);
+  if (role.SW.proj && role.QA.proj) {
+    const all = T.list.filter(o => o.isProject), tp = all.slice(0, 3).reduce((a, o) => a + o.total, 0) / (all.reduce((a, o) => a + o.total, 0) || 1);
+    out.push({ area: 'Tasks & projects', key: 'roles', title: 'Three tasks carry most project time',
+      text: `QA project time: **${top2(role.QA).join('**, **')}**. SW project time: **${top2(role.SW).join('**, **')}**.`,
+      detail: `The top 3 project tasks (${all.slice(0, 3).map(o => o.task).join(', ')}) are ${P0(tp)} of all project hours.`,
+      links: [{ label: 'Tasks by role', act: { scroll: 'sec-tasks' } }] });
+  }
+
+  // 7 · client changes
+  const ccTask = T.list.find(o => o.task === 'Client changes work');
+  const per = new Map();
+  for (const r of M.rows) {
+    if (r.j < 0 || !M.jobs[r.j].eff || !peoplePass(M, r, pf)) continue;
+    const o = per.get(r.j) || { h: 0, cc: 0 }; o.h += r.h; if (M.tasks[r.t] === 'Client changes work') o.cc += r.h; per.set(r.j, o);
+  }
+  const cells = new Map();
+  for (const [j, o] of per) { const e = M.jobs[j].eff; if (e.startYear !== M.year) continue; const k = e.type + '|' + e.cx; if (!cells.has(k)) cells.set(k, []); cells.get(k).push({ j, ...o, e }); }
+  const pts = [], outl = [];
+  for (const L of cells.values()) {
+    if (L.length < 5) continue;
+    const med = median(L.map(x => x.h));
+    for (const x of L) {
+      if (x.e.changes != null && x.e.changes !== '' && isFinite(+x.e.changes)) pts.push({ c: +x.e.changes, r: x.h / med, cc: x.cc / x.h });
+      if (x.h >= 2 * med && x.h - med >= 10) outl.push({ j: x.j, h: x.h, med, ex: x.h - med, e: x.e });
+    }
+  }
+  if (ccTask) {
+    let extra = '';
+    if (pts.length >= 40) {
+      const cs = pts.map(p => p.c).sort((a, b) => a - b), q1 = cs[Math.floor(cs.length * 0.25)], q3 = cs[Math.floor(cs.length * 0.75)];
+      const lo = pts.filter(p => p.c <= q1), hi = pts.filter(p => p.c >= q3), avg = a => a.reduce((s, x) => s + x, 0) / a.length;
+      if (q3 > q1 && lo.length >= 10 && hi.length >= 10)
+        extra = `Closed projects with **${q3}+ client-change rounds** took **${avg(hi.map(p => p.r)).toFixed(2)}×** the median of comparable projects (same type & complexity), vs ${avg(lo.map(p => p.r)).toFixed(2)}× for those with ${q1 === 0 ? 'no client changes' : '≤' + q1}; client-change work was ${P0(avg(hi.map(p => p.cc)))} of their hours vs ${P0(avg(lo.map(p => p.cc)))}.`;
+    }
+    out.push({ area: 'Tasks & projects', key: 'changes', title: 'Client changes drive overruns',
+      text: `Client changes work is **${H(ccTask.total)} h** — **${P(ccTask.total / (projH || 1))}** of project time${pf.role ? '' : ` (SW ${H(ccTask.SW)} h, QA ${H(ccTask.QA)} h)`}.`,
+      detail: extra || 'Not enough closed projects with a client-change count to compare.',
+      links: [{ label: 'Client changes section', act: { scroll: 'sec-changes' } }, { label: 'Filter: Client changes work', act: { filter: ['task', 'Client changes work'], scroll: 'sec-proj' } }] });
+  }
+
+  // 7b · where client changes come from (PM team, mix-adjusted)
+  const CG = aggChanges(M, pf, 'pmTeam').groups.filter(g => g.n >= 20 && g.idx != null && g.key !== '—').sort((a, b) => b.idx - a.idx);
+  if (CG.length >= 2) {
+    const hi = CG[0], lo = CG[CG.length - 1];
+    if (hi.idx >= 1.15 || lo.idx <= 0.85) out.push({ area: 'Tasks & projects', key: 'ccpm', title: 'Client changes differ by PM team',
+      text: `Adjusted for project type & complexity, **${hi.key}** projects carry **${hi.idx.toFixed(2)}×** the expected client-change hours (${hi.rounds != null ? hi.rounds.toFixed(1) + ' rounds avg' : 'rounds n/a'}); **${lo.key}** **${lo.idx.toFixed(2)}×**.`,
+      detail: 'PM team is the channel, not the source — changes come from the client and RE. Read the notes in the Client changes section before using this.',
+      links: [{ label: 'Client changes by PM team', act: { scroll: 'sec-changes' } }] });
+  }
+
+  // 8 · complexity scaling
+  const typeCount = new Map(); for (const L of cells.values()) for (const x of L) typeCount.set(x.e.type, (typeCount.get(x.e.type) || 0) + 1);
+  const ptype = (typeCount.get('Adhoc') || 0) >= 15 ? 'Adhoc' : [...typeCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (ptype) {
+    const X = aggComplexity(M, { ...pf, ptype }, { startedInYear: true }).list.filter(l => l.n >= 5 && !/no complexity/i.test(l.cx));
+    if (X.length >= 2) {
+      const a = X[0], b = X.reduce((m, l) => l.avg > m.avg ? l : m, X[0]);
+      const odd = []; for (let i = 1; i < X.length; i++) for (let k2 = 0; k2 < i; k2++) if (X[i].med < X[k2].med * 0.85) { odd.push(`${X[i].cx} (median ${X[i].med.toFixed(0)} h, n=${X[i].n}) sits below ${X[k2].cx} (${X[k2].med.toFixed(0)} h)`); break; }
+      out.push({ area: 'Tasks & projects', key: 'cx', title: `Complexity scales ${ptype} effort`,
+        text: `${ptype} (started ${M.year}): **${a.avg.toFixed(0)} h** per JobBook at ${a.cx} vs **${b.avg.toFixed(0)} h** at ${b.cx} — **×${(b.avg / a.avg).toFixed(1)}**.`,
+        detail: odd.length ? 'Check the complexity coding: ' + odd.join('; ') + '.' : 'Hours rise steadily with complexity — the scale separates effort well.',
+        links: [{ label: `Compare ${ptype}`, act: { filter: ['ptype', ptype], scroll: 'sec-cx' } }] });
+    }
+  }
+
+  // 9 · outliers
+  if (outl.length) {
+    outl.sort((a, b) => b.ex - a.ex);
+    const ex = outl.reduce((s, x) => s + x.ex, 0);
+    const withChg = outl.filter(x => +x.e.changes >= 10).length;
+    out.push({ area: 'Tasks & projects', key: 'outliers', title: 'Projects that took twice their peers',
+      text: `**${outl.length} closed projects** took ≥2× the median of comparable projects — **${H(ex)} h** above median (≈ ${(ex / perPM).toFixed(0)} person-months).`,
+      detail: `${withChg} of them had 10+ client-change rounds. Biggest gaps:`,
+      links: outl.slice(0, 4).map(x => ({ label: `${x.e.name} — ${H(x.h)} h vs ${H(x.med)} h`, act: { project: x.j } })) });
+  }
+
+  // 10 · internal / SD dev
+  const intH = C.tot[CAT_IDX.internal];
+  if (intH > 0) {
+    const ij = aggProjects(M, { ...pf, group: 'Internal / SD dev' });
+    if (ij.length) {
+      const t = ij[0];
+      out.push({ area: 'Tasks & projects', key: 'internal', title: intH / C.net < 0.05 ? 'Internal work is a small slice' : 'Internal work is a notable slice',
+        text: `Internal / SD dev jobs took **${H(intH)} h** (${P(intH / C.net)}); the largest is **${M.jobs[t.j].name}** with ${H(t.h)} h across ${t.nPeople} people.`,
+        detail: `Its top task is ${t.topTask} (${P0(t.topShare)}).`,
+        links: [{ label: 'Filter: Internal / SD dev', act: { filter: ['group', 'Internal / SD dev'], scroll: 'sec-proj' } }] });
+    }
+  }
+
+  // 11 · unclassified tasks
+  const unc = T.list.filter(o => /^(other tasks on project|standard work on jobs)$/i.test(o.task));
+  const uncH = unc.reduce((a, o) => a + o.total, 0);
+  if (uncH > 0) out.push({ area: 'Data quality', key: 'unclassified', title: 'Some project time has no task detail',
+    text: `"Other tasks on project" and "Standard work on jobs" hold **${H(uncH)} h** — **${P(uncH / (projH || 1))}** of project time.`,
+    detail: 'These hours can\'t be tied to set-up, testing or changes. A clearer iTime task choice would make the 2027 savings case sharper.',
+    links: [{ label: 'Filter: Other tasks on project', act: { filter: ['task', 'Other tasks on project'], scroll: 'sec-proj' } }] });
+
+  // 12 · coverage
+  const last2 = ms.slice(-2);
+  if (last2.length === 2) {
+    let cl = 0, pr = 0; for (const m of last2) { const v = C.byMonth[m]; cl += v[CAT_IDX.closed]; pr += CATS.reduce((s, c, i) => s + (c.project ? v[i] : 0), 0); }
+    out.push({ area: 'Data quality', key: 'coverage', title: 'Complexity views lag by about two months',
+      text: `Complexity is known for **${P0(C.tot[CAT_IDX.closed] / (projH || 1))}** of project hours, but only **${P0(cl / (pr || 1))}** in ${ML(last2[0])}–${ML(last2[1])}.`,
+      detail: 'Projects still in field are not in the closed-projects file yet — read recent months on the time split, not on complexity.',
+      links: [{ label: 'Time split', act: { scroll: 'sec-comp' } }] });
+  }
+  return out;
+}
+if (typeof module !== 'undefined') { module.exports.buildInsights = buildInsights; module.exports.aggChanges = aggChanges; }
+
+</script>
+<script>
+/* ===================== UI ===================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fH = n => (Math.round(n) || 0).toLocaleString('en-US');
+const fH1 = n => (Math.round(n * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fP = x => isFinite(x) ? (x * 100).toFixed(1) + '%' : '—';
+const fP0 = x => isFinite(x) ? Math.round(x * 100) + '%' : '—';
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monLabel = m => MON[+m.slice(5, 7) - 1] + (S.M && +m.slice(0, 4) !== S.M.year ? ' ' + m.slice(2, 4) : '');
+const SERIES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'].map(v => `var(${v})`);
+const SEQ = ['var(--q1)', 'var(--q2)', 'var(--q3)', 'var(--q4)', 'var(--q5)', 'var(--q6)', 'var(--q7)'];
+const seqColor = (x, max) => SEQ[Math.max(0, Math.min(6, Math.floor((x / (max || 1)) * 6.999)))];
+const seqInk = (x, max) => (x / (max || 1)) * 6.999 >= 4 ? '#fff' : 'var(--text)';
+const bar = (v, max) => `<div class="bar"><i style="width:${max ? Math.max(0, Math.min(100, v / max * 100)) : 0}%"></i></div>`;
+
+const S = {
+  itRows: null, effMap: null, effName: '', M: null,
+  f: { mgr: '', person: '', role: '', from: '', to: '', group: '', cx: '', ptype: '', client: '', task: '' },
+  root: CONFIG.ROOT, thr: 0.3, startedInYear: true,
+  projSort: { k: 'h', d: -1 }, projQ: '', projSel: null,
+  peopleSort: { k: 'net', d: -1 }, weekSel: null, ccBy: 'pmTeam', ccSel: null,
+};
+const status = t => { $('status').textContent = t; };
+const tick = () => new Promise(r => setTimeout(r, 20));
+
+/* ---------- file loading ---------- */
+$('fIt').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  $('sIt').className = ''; $('sIt').textContent = 'reading…';
+  status('Reading iTime…'); await tick();
+  try {
+    const text = mixedDecode(new Uint8Array(await file.arrayBuffer()));
+    status('Parsing iTime…'); await tick();
+    const raw = Papa.parse(text, { skipEmptyLines: true }).data;
+    S.itRows = ingestITime(raw);
+    $('sIt').className = 'ok'; $('sIt').textContent = file.name + ' · ' + S.itRows.length.toLocaleString('en-US') + ' rows';
+    rebuild();
+  } catch (err) { $('sIt').className = 'err'; $('sIt').textContent = 'error'; status(err.message); console.error(err); }
+});
+
+$('fEf').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  $('sEf').className = ''; $('sEf').textContent = 'reading…'; status('Reading Efficiency sheet… (large workbook, a few seconds)');
+  await tick();
+  try {
+    const buf = await file.arrayBuffer();
+    let wb = XLSX.read(buf, { type: 'array', sheets: ['Efficiency'], cellDates: true, dense: true });
+    let ws = wb.Sheets['Efficiency'];
+    if (!ws) {                                    // fall back: first sheet that has GEN_INFO JobBook
+      const heads = XLSX.read(buf, { type: 'array', dense: true, sheetRows: 2 });
+      const hit = heads.SheetNames.find(n => (XLSX.utils.sheet_to_json(heads.Sheets[n], { header: 1 })[0] || []).some(c => clean(c) === 'GEN_INFO JobBook'));
+      if (hit) { wb = XLSX.read(buf, { type: 'array', sheets: [hit], cellDates: true, dense: true }); ws = wb.Sheets[hit]; }
+    }
+    if (!ws) throw new Error('No sheet with a "GEN_INFO JobBook" column found.');
+    S.effMap = ingestEfficiency(XLSX.utils.sheet_to_json(ws, { defval: null, raw: true }));
+    $('sEf').className = 'ok'; $('sEf').textContent = file.name + ' · ' + S.effMap.size + ' JobBooks';
+    rebuild();
+  } catch (err) { $('sEf').className = 'err'; $('sEf').textContent = 'error'; status(err.message); console.error(err); }
+});
+
+function rebuild() {
+  if (!S.itRows) { status('Efficiency loaded — now load the iTime CSV.'); return; }
+  S.M = buildModel(S.itRows, S.effMap, S.root);
+  if (!S.M.rows.length) { status('No rows found under "' + S.root + '". Check the org root.'); }
+  else status((S.effMap ? '' : 'No Efficiency file yet — all project hours show as "not in Efficiency". ') + 'Ready · ' + S.M.people.length + ' people · ' + S.M.rows.length.toLocaleString('en-US') + ' rows · data to ' + S.M.rows.reduce((a, r) => r.d > a ? r.d : a, ''));
+  $('subtitle').textContent = 'iTime ' + S.M.year + ' × Efficiency (closed projects) · ' + S.root + "'s org";
+  document.title = 'Online SD · Where the time goes · ' + S.M.year;
+  $('empty').hidden = true; $('app').hidden = false;
+  for (const k in S.f) S.f[k] = '';
+  S.projSel = null; S.weekSel = null;
+  buildFilters(); render();
+}
+
+/* ---------- filters ---------- */
+function opts(list, cur, all) {
+  return `<option value="">${esc(all)}</option>` + list.map(v => { const [val, lab] = Array.isArray(v) ? v : [v, v]; return `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(lab)}</option>`; }).join('');
+}
+function buildFilters() {
+  const M = S.M, f = S.f;
+  const allMgrs = [...new Set(S.itRows.map(r => r.mgr))].filter(Boolean).sort();
+  const people = M.people.filter(p => !f.mgr || p.mgrs.has(f.mgr)).filter(p => !f.role || p.role === f.role).map(p => p.name).sort();
+  const effs = M.jobs.map(j => j.eff).filter(Boolean);
+  const uniq = a => [...new Set(a)].sort();
+  const cxs = uniq(effs.map(e => e.cx));
+  const html = [
+    fl('Org root', 'root', allMgrs.map(m => [m, m]), S.root, null),
+    `<div class="sep"></div>`,
+    fl('Manager', 'mgr', M.mgrs.slice().sort(), f.mgr, 'All managers'),
+    fl('Person', 'person', people, f.person, 'All people'),
+    fl('Role', 'role', ['SW', 'QA'], f.role, 'SW + QA'),
+    fl('From', 'from', M.months.map(m => [m, monLabel(m)]), f.from, 'First month'),
+    fl('To', 'to', M.months.map(m => [m, monLabel(m)]), f.to, 'Last month'),
+    `<div class="sep"></div>`,
+    fl('Project group', 'group', CATS.filter(c => c.project).map(c => c.label), f.group, 'All groups'),
+    fl('Complexity', 'cx', cxs, f.cx, 'All levels'),
+    fl('Project type', 'ptype', uniq(effs.map(e => e.type)), f.ptype, 'All types'),
+    fl('Client country', 'client', uniq(effs.map(e => e.client)), f.client, 'All countries'),
+    fl('Task', 'task', M.tasks.slice().sort(), f.task, 'All tasks'),
+    `<button class="btn" id="reset">Reset</button>`,
+    projectFiltersOn(f) ? `<div class="note">Project filters are on: task, complexity, projects tables show only matching project hours. KPI, time split, admin weeks and people stay on the whole time.</div>` : '',
+  ];
+  $('filters').innerHTML = html.join('');
+  $('filters').querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => {
+    const k = sel.dataset.k;
+    if (k === 'root') { S.root = sel.value; rebuild(); return; }
+    S.f[k] = sel.value;
+    if (k === 'mgr' || k === 'role') { const ok = S.M.people.some(p => p.name === S.f.person && (!S.f.mgr || p.mgrs.has(S.f.mgr)) && (!S.f.role || p.role === S.f.role)); if (!ok) S.f.person = ''; }
+    S.projSel = null; S.weekSel = null;
+    buildFilters(); render();
+  }));
+  $('reset').onclick = () => { for (const k in S.f) S.f[k] = ''; S.projSel = null; S.weekSel = null; buildFilters(); render(); };
+}
+function fl(label, k, list, cur, all) {
+  const o = all == null ? list.map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`).join('') : opts(list, cur, all);
+  return `<div class="fl"><label>${esc(label)}</label><select data-k="${k}" class="${cur && all != null ? 'on' : ''}">${o}</select></div>`;
+}
+function setFilter(k, v) { S.f[k] = S.f[k] === v ? '' : v; S.projSel = null; S.weekSel = null; buildFilters(); render(); }
+
+/* ---------- render ---------- */
+function render() {
+  const t0 = performance.now();
+  const C = aggComposition(S.M, S.f);
+  renderKpis(C); renderInsights(); renderComp(C); renderTasks(); renderCx(); renderChanges(); renderProj();
+  const W = aggWeeks(S.M, S.f, S.thr);
+  renderWeeks(W); renderPeople(C, W);
+  console.log('render', Math.round(performance.now() - t0), 'ms');
+}
+
+function renderKpis(C) {
+  const proj = CATS.reduce((a, c, i) => a + (c.project ? C.tot[i] : 0), 0);
+  const pm = new Set(); for (const r of S.M.rows) if (r.c !== LEAVE && peoplePass(S.M, r, S.f)) pm.add(r.p + '|' + r.mo);
+  const k = [
+    ['People', C.persons, 'SW + QA, leads excluded'],
+    ['Net working hours', fH(C.net), pm.size ? fH(C.net / pm.size) + ' h per person-month worked' : ''],
+    ['Project work', fP(proj / C.net), fH(proj) + ' h on jobs'],
+    ['Admin & management', fP(C.tot[CAT_IDX.admin] / C.net), fH(C.tot[CAT_IDX.admin]) + ' h'],
+    ['Training', fP(C.tot[CAT_IDX.training] / C.net), fH(C.tot[CAT_IDX.training]) + ' h'],
+    ['Leave & holidays', fH(C.leave) + ' h', 'not in net hours'],
+    ['With complexity', fP(C.tot[CAT_IDX.closed] / proj), 'of project hours (closed projects)'],
+  ];
+  $('kpis').innerHTML = k.map(([l, v, d]) => `<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join('');
+}
+
+function renderComp(C) {
+  const net = C.net || 1;
+  $('compBar').innerHTML = `<div class="stack">${CATS.map((c, i) => C.tot[i] > 0 ? `<i style="width:${C.tot[i] / net * 100}%;background:${SERIES[i]}" data-tip="${esc(c.label + '\n' + fH(C.tot[i]) + ' h · ' + fP(C.tot[i] / net))}"></i>` : '').join('')}</div>`;
+  const persons = Math.max(1, C.persons);
+  $('compTable').innerHTML = `<table style="margin-top:12px"><thead><tr><th>Category</th><th class="num">Hours</th><th class="num">% of net</th><th class="num">h / person</th></tr></thead><tbody>` +
+    CATS.map((c, i) => `<tr><td><span class="sw" style="background:${SERIES[i]}"></span>${esc(c.label)}${c.project ? '' : ' <span class="tag">non-project</span>'}</td><td class="num">${fH(C.tot[i])}</td><td class="num">${fP(C.tot[i] / net)}</td><td class="num">${fH(C.tot[i] / persons)}</td></tr>`).join('') +
+    `<tr><td><b>Net working hours</b></td><td class="num"><b>${fH(C.net)}</b></td><td class="num">100%</td><td class="num">${fH(C.net / persons)}</td></tr></tbody></table>`;
+  const months = Object.keys(C.byMonth).sort();
+  const grid = [0, 25, 50, 75, 100].map(g => `<div class="gl" style="bottom:${g}%"><span>${g}%</span></div>`).join('');
+  const cols = months.map(m => {
+    const v = C.byMonth[m], n = v.reduce((a, b) => a + b, 0) || 1;
+    return `<div class="col"><div class="st">${CATS.map((c, i) => v[i] > 0 ? `<i style="height:calc(${v[i] / n * 100}% - 2px);background:${SERIES[i]}" data-tip="${esc(monLabel(m) + ' · ' + c.label + '\n' + fH(v[i]) + ' h · ' + fP(v[i] / n) + ' of ' + fH(n) + ' net h')}"></i>` : '').join('')}</div></div>`;
+  }).join('');
+  $('compMonths').innerHTML = `<div class="cols">${grid}${cols}</div><div class="xl">${months.map(m => `<span>${monLabel(m)}</span>`).join('')}</div>` +
+    `<div class="legend">${CATS.map((c, i) => `<span class="k"><i style="background:${SERIES[i]}"></i>${esc(c.label)}</span>`).join('')}</div>`;
+}
+
+function renderTasks() {
+  const T = aggTasks(S.M, S.f);
+  const mx = Math.max(1, ...T.list.map(o => Math.max(o.SW, o.QA)));
+  $('tasks').innerHTML = `<div class="tscroll"><table><thead><tr><th>Task</th><th class="num" style="width:22%">SW hours</th><th class="num">% of SW</th><th class="num" style="width:22%">QA hours</th><th class="num">% of QA</th><th class="num">Total h</th><th class="num">% of total</th></tr></thead><tbody>` +
+    T.list.map(o => `<tr class="click${S.f.task === o.task ? ' sel' : ''}" data-task="${esc(o.task)}"><td>${esc(o.task)}${o.isProject ? '' : ' <span class="tag">non-project</span>'}</td>` +
+      `<td><div class="barcell">${bar(o.SW, mx)}<span>${fH(o.SW)}</span></div></td><td class="num">${fP(o.SW / T.sw)}</td>` +
+      `<td><div class="barcell">${bar(o.QA, mx)}<span>${fH(o.QA)}</span></div></td><td class="num">${fP(o.QA / T.qa)}</td>` +
+      `<td class="num">${fH(o.total)}</td><td class="num">${fP(o.total / T.total)}</td></tr>`).join('') +
+    `<tr><td><b>Total</b></td><td class="num"><b>${fH(T.sw)}</b></td><td></td><td class="num"><b>${fH(T.qa)}</b></td><td></td><td class="num"><b>${fH(T.total)}</b></td><td></td></tr></tbody></table></div>`;
+  $('tasks').querySelectorAll('tr[data-task]').forEach(tr => tr.onclick = () => setFilter('task', tr.dataset.task));
+}
+
+function renderCx() {
+  const M = S.M, f = S.f;
+  if (!M.hasEff) { $('cx').innerHTML = '<p class="muted">Load the Efficiency file to compare by complexity.</p>'; return; }
+  if (!f.ptype) {
+    const cnt = new Map();
+    const ff = { ...f, ptype: '', cx: '' };
+    const seen = new Set();
+    for (const r of M.rows) { if (r.j < 0 || seen.has(r.j)) continue; const e = M.jobs[r.j].eff; if (!e) continue; if (S.startedInYear && e.startYear !== M.year) continue; if (!peoplePass(M, r, ff) || !projectPass(M, r, ff)) continue; seen.add(r.j); cnt.set(e.type, (cnt.get(e.type) || 0) + 1); }
+    $('cx').innerHTML = `<p>Pick a Project Type — complexity levels are only comparable within one type.</p><div class="chips">${[...cnt.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `<button class="chip" data-pt="${esc(t)}">${esc(t)}<em>${n} JobBooks</em></button>`).join('')}</div>` + startedYearBox();
+    $('cx').querySelectorAll('[data-pt]').forEach(b => b.onclick = () => setFilter('ptype', b.dataset.pt));
+    bindStarted();
+    return;
+  }
+  const X = aggComplexity(M, f, { startedInYear: S.startedInYear });
+  if (!X.list.length) { $('cx').innerHTML = `<p class="muted">No closed ${esc(f.ptype)} projects for these filters.</p>` + startedYearBox(); bindStarted(); return; }
+  const mxAvg = Math.max(...X.list.map(l => l.avg));
+  const mxMix = Math.max(...X.list.flatMap(l => l.mix), 0.01);
+  $('cx').innerHTML = `<div class="row"><b>${esc(f.ptype)}</b><button class="btn" id="cxClear">Change type</button>${startedYearBox()}</div>` +
+    `<div class="tscroll" style="max-height:none"><table><thead><tr><th>Complexity</th><th class="num">JobBooks</th><th class="num" style="width:18%">Avg h / JobBook</th><th class="num">Median</th><th class="num">Avg SW h</th><th class="num">Avg QA h</th><th class="num">Avg client changes</th>` +
+    X.topTasks.map(t => `<th class="num" title="${esc(t)}" style="max-width:90px;white-space:normal">${esc(t)}</th>`).join('') + `<th class="num">Other tasks</th></tr></thead><tbody>` +
+    X.list.map(l => `<tr class="click${f.cx === l.cx ? ' sel' : ''}" data-cx="${esc(l.cx)}"><td>${esc(l.cx)}</td><td class="num">${l.n}</td><td><div class="barcell">${bar(l.avg, mxAvg)}<span>${fH1(l.avg)}</span></div></td><td class="num">${fH1(l.med)}</td><td class="num">${fH1(l.sw)}</td><td class="num">${fH1(l.qa)}</td><td class="num">${l.chg == null ? '—' : l.chg.toFixed(1)}</td>` +
+      l.mix.map(x => `<td class="hcell" style="background:${seqColor(x, mxMix)};color:${seqInk(x, mxMix)}">${fP0(x)}</td>`).join('') + `<td class="hcell">${fP0(l.other)}</td></tr>`).join('') +
+    `</tbody></table></div><p class="muted" style="margin:8px 0 0">Task columns = share of that level's hours (top 6 tasks for this selection). Darker = larger share.</p>`;
+  $('cxClear').onclick = () => setFilter('ptype', f.ptype);
+  $('cx').querySelectorAll('tr[data-cx]').forEach(tr => tr.onclick = () => setFilter('cx', tr.dataset.cx));
+  bindStarted();
+}
+function startedYearBox() { return `<label style="margin-left:auto;display:inline-flex;gap:6px;align-items:center;color:var(--text2)"><input type="checkbox" id="st26"${S.startedInYear ? ' checked' : ''}> Only projects that started programming in ${S.M.year}</label>`; }
+function bindStarted() { const b = $('st26'); if (b) b.onchange = () => { S.startedInYear = b.checked; renderCx(); }; }
+
+function renderChanges() {
+  const M = S.M, f = S.f;
+  if (!M.hasEff) { $('changes').innerHTML = '<p class="muted">Load the Efficiency file to see client changes.</p>'; return; }
+  const A = aggChanges(M, f, S.ccBy), byType = S.ccBy === 'type';
+  const G = A.groups, mxPer = Math.max(0.01, ...G.map(g => g.ccPer)), mxIdx = Math.max(2, ...G.map(g => g.idx || 0));
+  const byOpts = Object.entries(CC_BY).map(([k, [l]]) => `<option value="${k}"${k === S.ccBy ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  const mix = A.mixed && !byType ? `<span class="warn">Mixed project types — read "vs expected", or</span> <button class="btn" id="ccAdhoc">Adhoc only</button>` : f.ptype ? `<span class="muted">Project type: <b>${esc(f.ptype)}</b></span> <button class="btn" id="ccAll">All types</button>` : '';
+  const idxCell = g => g.idx == null ? '<td class="num muted">—</td>' : `<td><div class="barcell"><div class="idx"><i style="width:${Math.min(100, g.idx / mxIdx * 100)}%"></i><s style="left:${100 / mxIdx}%"></s></div><span>${g.idx.toFixed(2)}×</span></div></td>`;
+  $('changes').innerHTML =
+    `<div class="row"><label>Group by <select id="ccBy">${byOpts}</select></label>${mix}</div>` +
+    `<div class="tiles"><div class="tile"><div class="l">Closed projects</div><div class="v">${A.tot.n}</div></div>` +
+    `<div class="tile"><div class="l">Client-change hours on them</div><div class="v">${fH(A.tot.cc)}</div></div>` +
+    `<div class="tile"><div class="l">Share of their hours</div><div class="v">${fP(A.tot.cc / (A.tot.h || 1))}</div></div>` +
+    `<div class="tile"><div class="l">Not covered (open / other jobs)</div><div class="v">${projectFiltersOn(f) ? '—' : fH(A.uncovered) + ' h'}</div></div></div>` +
+    (G.length ? `<div class="tscroll" style="max-height:none"><table class="nw"><thead><tr><th>${esc(CC_BY[S.ccBy][0])}</th><th class="num">Projects</th><th class="num">Avg rounds</th><th class="num">0 rounds</th><th class="num">Change h</th><th class="num">SW / QA h</th><th class="num" style="width:16%">Change h / project</th><th class="num">% of project h</th>` +
+      (byType ? '' : `<th class="num" style="width:16%" title="Actual change hours ÷ average of comparable projects (same type & complexity)">vs expected</th><th class="num" title="Average of: project hours ÷ median hours of comparable projects">Total h vs comparable</th>`) + `</tr></thead><tbody>` +
+      G.map(g => `<tr class="click${g.n < 10 ? ' small' : ''}${S.ccSel === g.key ? ' sel' : ''}" data-g="${esc(g.key)}"><td class="pname">${esc(g.key)}${g.n < 10 ? ' <span class="tag">small</span>' : ''}</td><td class="num">${g.n}</td><td class="num">${g.rounds == null ? '—' : g.rounds.toFixed(1)}</td><td class="num">${g.zeroRounds}</td><td class="num">${fH(g.cc)}</td><td class="num">${fH(g.SW)} / ${fH(g.QA)}</td>` +
+        `<td><div class="barcell">${bar(g.ccPer, mxPer)}<span>${fH1(g.ccPer)}</span></div></td><td class="num">${fP(g.share)}</td>` + (byType ? '' : idxCell(g) + `<td class="num">${g.hIdx.toFixed(2)}×</td>`) + `</tr>`).join('') +
+      `</tbody></table></div><p class="muted" style="margin:8px 0 0">Bar in "vs expected": the vertical line marks 1.00× (as expected for its project types &amp; complexity).${byType ? ' Grouped by project type, so the mix adjustment does not apply.' : ''}</p><div id="ccDetail"></div>`
+      : '<p class="muted">No closed projects for these filters.</p>');
+  $('ccBy').onchange = e => { S.ccBy = e.target.value; S.ccSel = null; renderChanges(); };
+  if ($('ccAdhoc')) $('ccAdhoc').onclick = () => { S.f.ptype = 'Adhoc'; buildFilters(); render(); };
+  if ($('ccAll')) $('ccAll').onclick = () => { S.f.ptype = ''; buildFilters(); render(); };
+  $('changes').querySelectorAll('tr[data-g]').forEach(tr => tr.onclick = () => { S.ccSel = S.ccSel === tr.dataset.g ? null : tr.dataset.g; renderChanges(); });
+  const sel = G.find(g => g.key === S.ccSel);
+  if (sel) {
+    const L = sel.jobs.slice(0, 20);
+    $('ccDetail').innerHTML = `<div class="detail"><button class="btn close" id="ccClose">Close</button><h4>${esc(sel.key)} · top projects by client-change hours</h4><div class="meta">${sel.n} closed projects · ${fH(sel.cc)} change h · showing top ${L.length}. Expected = average change hours of comparable projects (same type &amp; complexity).</div>` +
+      `<div class="tscroll" style="max-height:420px"><table class="mini nw"><thead><tr><th>Project #</th><th>Project</th><th>Type</th><th>Complexity</th><th>Client country</th><th class="num">Rounds</th><th class="num">Change h</th><th class="num">Expected</th><th class="num">Total h</th><th class="num">Comparable median</th></tr></thead><tbody>` +
+      L.map(o => `<tr class="click" data-j="${o.j}"><td>${esc(M.jobs[o.j].no)}</td><td class="pname">${esc(o.e.name)}</td><td>${esc(o.e.type)}</td><td>${esc(o.e.cx)}</td><td>${esc(o.e.client)}</td><td class="num">${o.rounds == null ? '—' : o.rounds}</td><td class="num"><b>${fH1(o.cc)}</b></td><td class="num">${fH1(o.expCC)}</td><td class="num">${fH1(o.h)}</td><td class="num">${fH1(o.peerH)}</td></tr>`).join('') +
+      `</tbody></table></div><p class="muted" style="margin:6px 0 0">Click a project to open its people × tasks view.</p></div>`;
+    $('ccClose').onclick = () => { S.ccSel = null; renderChanges(); };
+    $('ccDetail').querySelectorAll('tr[data-j]').forEach(tr => tr.onclick = () => applyAct({ project: +tr.dataset.j }));
+  }
+}
+
+function renderProj() {
+  const M = S.M;
+  let list = aggProjects(M, S.f);
+  const q = S.projQ.toLowerCase();
+  if (q) list = list.filter(o => (M.jobs[o.j].no + ' ' + M.jobs[o.j].name).toLowerCase().includes(q));
+  const key = { no: o => M.jobs[o.j].no, name: o => M.jobs[o.j].name.toLowerCase(), group: o => M.jobs[o.j].group, cx: o => M.jobs[o.j].eff ? M.jobs[o.j].eff.cx : '~', type: o => M.jobs[o.j].eff ? M.jobs[o.j].eff.type : '~', client: o => M.jobs[o.j].eff ? M.jobs[o.j].eff.client : '~', h: o => o.h, SW: o => o.SW, QA: o => o.QA, np: o => o.nPeople, top: o => o.topTask };
+  const s = S.projSort, kf = key[s.k];
+  list.sort((a, b) => { const x = kf(a), y = kf(b); return (x < y ? -1 : x > y ? 1 : 0) * s.d; });
+  const total = list.reduce((a, o) => a + o.h, 0), mx = Math.max(1, ...list.map(o => o.h));
+  const LIM = 300, shown = list.slice(0, LIM);
+  const th = (k, l, num) => `<th class="sort${num ? ' num' : ''}" data-s="${k}">${esc(l)}${s.k === k ? (s.d > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  $('proj').innerHTML = `<div class="row"><input type="search" id="projQ" placeholder="Search job number or name…" value="${esc(S.projQ)}"><span class="muted">${list.length.toLocaleString('en-US')} jobs · ${fH(total)} h${list.length > LIM ? ' · showing top ' + LIM : ''}</span></div>` +
+    `<div class="tscroll"><table class="nw"><thead><tr>${th('no', 'Project #')}${th('name', 'Project')}${th('group', 'Group')}${th('cx', 'Complexity')}${th('type', 'Type')}${th('client', 'Client country')}${th('h', 'Hours', 1)}${th('SW', 'SW h', 1)}${th('QA', 'QA h', 1)}${th('np', 'People', 1)}${th('top', 'Top task')}</tr></thead><tbody>` +
+    shown.map(o => { const J = M.jobs[o.j], e = J.eff; return `<tr class="click${S.projSel === o.j ? ' sel' : ''}" data-j="${o.j}"><td>${esc(J.no)}</td><td class="pname">${esc(J.name)}</td><td><span class="tag">${esc(J.group)}</span></td><td>${esc(e ? e.cx : '—')}</td><td>${esc(e ? e.type : '—')}</td><td>${esc(e ? e.client : '—')}</td><td style="min-width:150px"><div class="barcell">${bar(o.h, mx)}<span>${fH1(o.h)}</span></div></td><td class="num">${fH1(o.SW)}</td><td class="num">${fH1(o.QA)}</td><td class="num">${o.nPeople}</td><td>${esc(o.topTask)} <span class="muted">${fP0(o.topShare)}</span></td></tr>`; }).join('') +
+    `</tbody></table></div><div id="projDetail"></div>`;
+  const inp = $('projQ');
+  inp.oninput = () => { S.projQ = inp.value; const pos = inp.selectionStart; renderProj(); const n = $('projQ'); n.focus(); n.setSelectionRange(pos, pos); };
+  $('proj').querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { const k = t.dataset.s; S.projSort = { k, d: S.projSort.k === k ? -S.projSort.d : (['h', 'SW', 'QA', 'np'].includes(k) ? -1 : 1) }; renderProj(); });
+  $('proj').querySelectorAll('tr[data-j]').forEach(tr => tr.onclick = () => { S.projSel = S.projSel === +tr.dataset.j ? null : +tr.dataset.j; renderProj(); if (S.projSel != null) $('projDetail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+  if (S.projSel != null) renderProjDetail(S.projSel);
+}
+
+function renderProjDetail(j) {
+  const M = S.M, J = M.jobs[j], e = J.eff;
+  const cell = new Map(), pp = new Set(), tt = new Map();
+  for (const r of M.rows) {
+    if (r.j !== j || !peoplePass(M, r, S.f)) continue;
+    pp.add(r.p); tt.set(r.t, (tt.get(r.t) || 0) + r.h);
+    const k = r.p + '|' + r.t; cell.set(k, (cell.get(k) || 0) + r.h);
+  }
+  const tasks = [...tt.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const ppl = [...pp].sort((a, b) => M.people[a].name.localeCompare(M.people[b].name));
+  const mx = Math.max(1, ...cell.values());
+  const meta = e ? [`${e.cx}`, e.type, e.client, e.sl, e.template !== '—' ? e.template : '', `SW lead ${e.sw || '—'} (${e.swTeam || '—'})`, `QA lead ${e.qa || '—'}`, `assigned ${e.assign || '—'}`, `1st link ${e.firstLink || '—'}`, `launch ${e.launch || '—'}`, `close ${e.closeEnd ? e.closeEnd.slice(0, 7) : '—'}`, `client changes ${e.changes ?? '—'}`, `EFLD ${e.efld ?? '—'}`, `LOI ${e.loi ?? '—'}`].filter(Boolean).join(' · ') : 'Not in the Efficiency file — no complexity, type or timings.';
+  $('projDetail').innerHTML = `<div class="detail"><button class="btn close" id="pdClose">Close</button><h4>${esc(J.no)} · ${esc(J.name)}</h4><div class="meta">${esc(J.group)} · ${esc(meta)}</div>` +
+    `<div class="tscroll" style="max-height:360px"><table class="mini"><thead><tr><th>Person</th><th>Role</th>${tasks.map(t => `<th class="num">${esc(M.tasks[t])}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>` +
+    ppl.map(p => { let tot = 0; const tds = tasks.map(t => { const v = cell.get(p + '|' + t) || 0; tot += v; return v ? `<td class="hcell" style="background:${seqColor(v, mx)};color:${seqInk(v, mx)}">${fH1(v)}</td>` : '<td></td>'; }).join(''); return `<tr><td>${esc(M.people[p].name)}</td><td>${M.people[p].role}</td>${tds}<td class="num"><b>${fH1(tot)}</b></td></tr>`; }).join('') +
+    `<tr><td><b>Total</b></td><td></td>${tasks.map(t => `<td class="num"><b>${fH1(tt.get(t))}</b></td>`).join('')}<td class="num"><b>${fH1([...tt.values()].reduce((a, b) => a + b, 0))}</b></td></tr></tbody></table></div></div>`;
+  $('pdClose').onclick = () => { S.projSel = null; renderProj(); };
+}
+
+function renderWeeks(W) {
+  const M = S.M;
+  const judged = W.filter(w => w.judged), flagged = judged.filter(w => w.flag), other = judged.filter(w => !w.flag);
+  const avgFlag = flagged.length ? flagged.reduce((a, w) => a + w.share, 0) / flagged.length : NaN;
+  const ph = list => { const c = [0, 0, 0, 0]; list.forEach(w => c[w.phase]++); return c; };
+  const pf = ph(flagged), po = ph(other);
+  const mxP = Math.max(...pf.map(x => x / (flagged.length || 1)), ...po.map(x => x / (other.length || 1)), 0.01);
+  // by manager
+  const bm = new Map();
+  for (const w of judged) { const k = M.mgrs[w.mgr]; let o = bm.get(k); if (!o) { o = { n: 0, f: 0, s: 0, p: new Set(), fc: 0 }; bm.set(k, o); } o.n++; o.s += w.share; o.p.add(w.p); if (w.flag) { o.f++; if (w.phase === 1 || w.phase === 2) o.fc++; } }
+  const thrOpts = [0.2, 0.25, 0.3, 0.4, 0.5].map(t => `<option value="${t}"${t === S.thr ? ' selected' : ''}>${Math.round(t * 100)}%</option>`).join('');
+  // heat grid
+  const weeks = [...new Set(W.map(w => w.w))].sort();
+  const byP = new Map(); W.forEach(w => { if (!byP.has(w.p)) byP.set(w.p, new Map()); byP.get(w.p).set(w.w, w); });
+  const ppl = [...byP.keys()].sort((a, b) => (M.people[a].lastMgr || '').localeCompare(M.people[b].lastMgr || '') || M.people[a].name.localeCompare(M.people[b].name));
+  let lastMgr = null; const rows = [];
+  for (const p of ppl) {
+    const mg = M.people[p].lastMgr;
+    if (mg !== lastMgr) { rows.push(`<tr><td class="mg" colspan="${weeks.length + 1}">${esc(mg)}</td></tr>`); lastMgr = mg; }
+    rows.push(`<tr><td class="pn">${esc(M.people[p].name)} <span class="muted">${M.people[p].role}</span></td>` + weeks.map(wk => {
+      const w = byP.get(p).get(wk);
+      if (!w) return '<td class="h nj" data-tip="' + esc(M.people[p].name + ' · w/e ' + wk + '\nno rows') + '"></td>';
+      const tip = esc(`${M.people[p].name} · week ending ${wk}\nNet ${fH1(w.net)} h · admin ${fH1(w.admin)} h (${fP0(w.share)})${w.leave ? '\nLeave ' + fH1(w.leave) + ' h' : ''}\n${PHASES[w.phase]}${w.judged ? '' : '\nNot judged (< ' + CONFIG.MIN_WEEK_NET_HOURS + ' net h)'}`);
+      const bg = w.judged ? SEQ[Math.min(6, Math.floor(w.share * 10))] : 'var(--nojudge)';
+      return `<td class="h${w.flag ? ' flag' : ''}${w.judged ? '' : ' nj'}" style="background:${bg}" data-p="${p}" data-w="${wk}" data-tip="${tip}"></td>`;
+    }).join('') + '</tr>');
+  }
+  const wkHead = weeks.map(wk => `<th class="wk">${wk.slice(5)}</th>`).join('');
+  $('weeks').innerHTML =
+    `<div class="row"><label>Admin-heavy when admin share ≥ <select id="thr">${thrOpts}</select></label></div>` +
+    `<div class="tiles"><div class="tile"><div class="l">Person-weeks judged</div><div class="v">${judged.length.toLocaleString('en-US')}</div></div>` +
+    `<div class="tile"><div class="l">Admin-heavy weeks</div><div class="v">${flagged.length} <span class="muted" style="font-size:13px">(${fP(flagged.length / (judged.length || 1))})</span></div></div>` +
+    `<div class="tile"><div class="l">Avg admin share in those weeks</div><div class="v">${fP(avgFlag)}</div></div>` +
+    `<div class="tile"><div class="l">Avg admin share, all judged weeks</div><div class="v">${fP(judged.reduce((a, w) => a + w.share, 0) / (judged.length || 1))}</div></div></div>` +
+    `<div class="grid2"><div><h3 style="margin-top:0">Where were their projects that week?</h3><table><thead><tr><th>Pipeline that week</th><th class="num" style="width:30%">Admin-heavy weeks</th><th class="num" style="width:30%">Other weeks</th></tr></thead><tbody>` +
+    PHASES.map((l, i) => `<tr><td>${esc(l)}</td><td><div class="barcell">${bar(pf[i] / (flagged.length || 1), mxP)}<span>${fP0(pf[i] / (flagged.length || 1))}</span></div></td><td><div class="barcell">${bar(po[i] / (other.length || 1), mxP)}<span>${fP0(po[i] / (other.length || 1))}</span></div></td></tr>`).join('') +
+    `<tr><td class="muted">Weeks</td><td class="num muted">${flagged.length}</td><td class="num muted">${other.length}</td></tr></tbody></table>` +
+    `<p class="muted" style="margin:8px 0 0">If admin-heavy weeks lean to "Only changes / field phase" more than other weeks do, people are waiting for changes instead of getting new set-ups.</p></div>` +
+    `<div><h3 style="margin-top:0">By manager</h3><table><thead><tr><th>Manager</th><th class="num">People</th><th class="num">Weeks judged</th><th class="num">Admin-heavy</th><th class="num">% admin-heavy</th><th class="num">Avg admin share</th><th class="num">…of which changes/field only</th></tr></thead><tbody>` +
+    [...bm.entries()].sort((a, b) => b[1].f / b[1].n - a[1].f / a[1].n).map(([m, o]) => `<tr class="click" data-m="${esc(m)}"><td>${esc(m)}</td><td class="num">${o.p.size}</td><td class="num">${o.n}</td><td class="num">${o.f}</td><td class="num">${fP(o.f / o.n)}</td><td class="num">${fP(o.s / o.n)}</td><td class="num">${o.f ? fP(o.fc / o.f) : '—'}</td></tr>`).join('') +
+    `</tbody></table></div></div>` +
+    `<h3>Person × week · admin share</h3><div class="legend">${['<10%', '10–20%', '20–30%', '30–40%', '40–50%', '50–60%', '≥60%'].map((l, i) => `<span class="k"><i style="background:${SEQ[i]}"></i>${l}</span>`).join('')}<span class="k"><i style="background:var(--nojudge)"></i>not judged / no rows</span><span class="k"><i style="background:var(--surface);outline:2px solid var(--text);outline-offset:-2px"></i>admin-heavy</span><span class="muted">Click a cell for the week's detail.</span></div>` +
+    `<div style="overflow:auto;max-height:640px"><table class="heat" style="width:auto"><thead><tr><th></th>${wkHead}</tr></thead><tbody>${rows.join('')}</tbody></table></div><div id="weekDetail"></div>`;
+  $('thr').onchange = e => { S.thr = +e.target.value; renderInsights(); const W2 = aggWeeks(S.M, S.f, S.thr); renderWeeks(W2); renderPeople(aggComposition(S.M, S.f), W2); };
+  $('weeks').querySelectorAll('tr[data-m]').forEach(tr => tr.onclick = () => setFilter('mgr', tr.dataset.m));
+  $('weeks').querySelectorAll('td[data-p]').forEach(td => td.onclick = () => { S.weekSel = { p: +td.dataset.p, w: td.dataset.w }; renderWeekDetail(); });
+  if (S.weekSel) renderWeekDetail();
+}
+
+function renderWeekDetail() {
+  const M = S.M, { p, w } = S.weekSel, D = weekDetail(M, p, w);
+  const phCls = { 'Set-up': 'Set-up', 'Changes': 'Changes', 'Field': 'Field' };
+  $('weekDetail').innerHTML = `<div class="detail"><button class="btn close" id="wdClose">Close</button><h4>${esc(M.people[p].name)} · week ending ${esc(w)}</h4>` +
+    `<div class="meta">Net ${fH1(D.net)} h · admin ${fH1(D.admin)} h (${fP0(D.admin / (D.net || 1))})${D.leave ? ' · leave ' + fH1(D.leave) + ' h' : ''} · ${esc(M.people[p].role)} · ${esc(M.people[p].title)}</div>` +
+    `<div class="grid2"><div><b>Tasks logged</b><table class="mini"><tbody>${D.tasks.map(([t, h]) => `<tr><td>${esc(t)}</td><td class="num">${fH1(h)}</td></tr>`).join('')}</tbody></table>` +
+    `<p style="margin:10px 0 4px"><b>Jobs logged</b></p><table class="mini"><tbody>${D.projs.map(({ J, h }) => `<tr><td>${esc(J.no)}</td><td>${esc(J.name)}</td><td><span class="tag">${esc(J.group)}</span></td><td class="num">${fH1(h)}</td></tr>`).join('') || '<tr><td class="muted">none</td></tr>'}</tbody></table></div>` +
+    `<div><b>Closed projects in their pipeline that week</b><table class="mini"><thead><tr><th>Project</th><th>Phase</th><th>Type</th><th>1st link</th><th>Launch</th></tr></thead><tbody>${D.active.map(({ e, ph }) => `<tr><td>${esc(e.name)}</td><td>${esc(phCls[ph])}</td><td>${esc(e.type)}</td><td>${esc(e.firstLink)}</td><td>${esc(e.launch)}</td></tr>`).join('') || '<tr><td class="muted" colspan="5">none tracked (open projects / programs have no dates)</td></tr>'}</tbody></table></div></div></div>`;
+  $('wdClose').onclick = () => { S.weekSel = null; $('weekDetail').innerHTML = ''; };
+  $('weekDetail').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function renderPeople(C, W) {
+  const M = S.M, by = new Map();
+  for (const r of M.rows) {
+    if (!peoplePass(M, r, S.f)) continue;
+    let o = by.get(r.p); if (!o) { o = { p: r.p, net: 0, proj: 0, admin: 0, train: 0, leave: 0, tasks: new Map() }; by.set(r.p, o); }
+    if (r.c === LEAVE) { o.leave += r.h; continue; }
+    o.net += r.h;
+    if (r.j >= 0) { o.proj += r.h; o.tasks.set(r.t, (o.tasks.get(r.t) || 0) + r.h); }
+    else if (r.c === CAT_IDX.training) o.train += r.h; else o.admin += r.h;
+  }
+  const fw = new Map(); W.forEach(w => { if (w.flag) fw.set(w.p, (fw.get(w.p) || 0) + 1); });
+  const list = [...by.values()].map(o => { let tp = '', th = 0; for (const [t, h] of o.tasks) if (h > th) { th = h; tp = M.tasks[t]; } const P = M.people[o.p]; return { ...o, name: P.name, mgr: [...P.mgrs].join(', '), role: P.role, title: P.title, pp: o.proj / (o.net || 1), ap: o.admin / (o.net || 1), tp: o.train / (o.net || 1), fw: fw.get(o.p) || 0, top: tp, topShare: o.proj ? th / o.proj : 0 }; });
+  const s = S.peopleSort; list.sort((a, b) => { const x = a[s.k], y = b[s.k]; return (x < y ? -1 : x > y ? 1 : 0) * s.d; });
+  const mxA = Math.max(0.01, ...list.map(o => o.ap));
+  const th = (k, l, num) => `<th class="sort${num ? ' num' : ''}" data-s="${k}">${esc(l)}${s.k === k ? (s.d > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  $('people').innerHTML = `<div class="tscroll"><table class="nw"><thead><tr>${th('name', 'Person')}${th('mgr', 'Manager')}${th('role', 'Role')}${th('title', 'Title')}${th('net', 'Net h', 1)}${th('pp', 'Project %', 1)}${th('ap', 'Admin %', 1)}${th('tp', 'Training %', 1)}${th('leave', 'Leave h', 1)}${th('fw', 'Admin-heavy weeks', 1)}${th('top', 'Top project task')}</tr></thead><tbody>` +
+    list.map(o => `<tr class="click${S.f.person === o.name ? ' sel' : ''}" data-n="${esc(o.name)}"><td>${esc(o.name)}</td><td>${esc(o.mgr)}</td><td>${o.role}</td><td class="muted">${esc(o.title)}</td><td class="num">${fH(o.net)}</td><td class="num">${fP(o.pp)}</td><td style="min-width:150px"><div class="barcell">${bar(o.ap, mxA)}<span>${fP(o.ap)}</span></div></td><td class="num">${fP(o.tp)}</td><td class="num">${fH(o.leave)}</td><td class="num">${o.fw}</td><td>${esc(o.top)} <span class="muted">${fP0(o.topShare)}</span></td></tr>`).join('') +
+    `</tbody></table></div>`;
+  $('people').querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { const k = t.dataset.s; S.peopleSort = { k, d: S.peopleSort.k === k ? -S.peopleSort.d : (['name', 'mgr', 'role', 'title', 'top'].includes(k) ? 1 : -1) }; renderPeople(C, W); });
+  $('people').querySelectorAll('tr[data-n]').forEach(tr => tr.onclick = () => setFilter('person', tr.dataset.n));
+}
+
+/* ---------- insights ---------- */
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+function renderInsights() {
+  const list = buildInsights(S.M, S.f, S.thr);
+  S.ins = list;
+  $('insCount').textContent = list.length ? '· ' + list.length : '';
+  const areas = [...new Set(list.map(i => i.area))];
+  $('ins').innerHTML = list.length ? areas.map(a => `<div><div class="ins-area">${esc(a)}</div><div class="ins-grid">${list.map((i, n) => i.area !== a ? '' :
+    `<div class="ins${a === 'Data quality' ? ' dq' : ''}"><h4>${esc(i.title)}</h4><p>${md(i.text)}</p>${i.detail ? `<p class="d">${md(i.detail)}</p>` : ''}` +
+    `<div class="lk${i.links.length > 2 ? ' list' : ''}">${i.links.map((l, k) => `<a data-i="${n}" data-l="${k}">${i.links.length > 2 ? '→ ' : ''}${esc(l.label)}</a>`).join('')}</div></div>`).join('')}</div></div>`).join('')
+    : '<p class="muted">Not enough data for insights with these filters.</p>';
+  $('ins').querySelectorAll('a[data-i]').forEach(a => a.onclick = () => applyAct(S.ins[+a.dataset.i].links[+a.dataset.l].act));
+}
+function applyAct(act) {
+  if (act.filter) { const [k, v] = act.filter; S.f[k] = v; S.projSel = null; S.weekSel = null; buildFilters(); render(); }
+  if (act.sortPeople) { S.peopleSort = { k: act.sortPeople, d: -1 }; render(); }
+  if (act.project != null) { S.projSel = act.project; S.projQ = S.M.jobs[act.project].no; renderProj(); $('projDetail').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+  if (act.scroll) $(act.scroll).scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+function setInsOpen(open) {
+  S.insOpen = open;
+  $('insBody').hidden = !open; $('insChev').textContent = open ? '▾' : '▸'; $('insToggle').textContent = open ? 'Hide insights' : 'Show insights';
+}
+$('insToggle').onclick = $('insHead').onclick = () => setInsOpen(!S.insOpen);
+$('insCopy').onclick = async () => {
+  const f = S.f, scope = [f.mgr && 'Manager: ' + f.mgr, f.person && 'Person: ' + f.person, f.role && 'Role: ' + f.role, (f.from || f.to) && 'Period: ' + (f.from || S.M.months[0]) + ' – ' + (f.to || S.M.months[S.M.months.length - 1])].filter(Boolean).join(' · ') || 'All people in ' + S.root + "'s org";
+  const strip = s => s.replace(/\*\*/g, '');
+  const areas = [...new Set(S.ins.map(i => i.area))];
+  const txt = `Online SD · Key insights (${scope})\n\n` + areas.map(a => a.toUpperCase() + '\n' + S.ins.filter(i => i.area === a).map(i => `• ${i.title}: ${strip(i.text)}${i.detail ? ' ' + strip(i.detail) : ''}${i.key === 'outliers' ? ' ' + i.links.map(l => l.label).join('; ') + '.' : ''}`).join('\n')).join('\n\n');
+  try { await navigator.clipboard.writeText(txt); $('insCopy').textContent = 'Copied ✓'; }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); $('insCopy').textContent = 'Copied ✓'; }
+  setTimeout(() => { $('insCopy').textContent = 'Copy as text'; }, 1800);
+};
+
+/* ---------- tooltip ---------- */
+const tip = $('tip');
+document.addEventListener('mousemove', e => {
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if (!el) { tip.style.display = 'none'; return; }
+  tip.textContent = el.getAttribute('data-tip');
+  tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+
+</script>
+</body>
+</html>
